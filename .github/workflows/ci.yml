@@ -42,3 +42,5 @@ jobs:
         run: npm run test:chat
       - name: Verify customer discovery and feedback states
         run: npm run test:experience
+      - name: Verify promotion banners and scoped loading
+        run: npm run test:banners

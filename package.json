@@ -8,12 +8,13 @@
     "dev:demo": "vite --mode demo --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs tests/chat.test.mjs",
+    "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs tests/chat.test.mjs tests/loading-banners.test.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "seed:sql": "node scripts/generate-seed.mjs",
     "test:responsive": "node scripts/responsive-check.mjs",
     "test:chat": "node scripts/chat-browser-check.mjs",
-    "test:experience": "node scripts/customer-experience-check.mjs"
+    "test:experience": "node scripts/customer-experience-check.mjs",
+    "test:banners": "node scripts/banner-performance-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",

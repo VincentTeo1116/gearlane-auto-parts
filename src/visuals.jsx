@@ -23,3 +23,8 @@ export function StoreLoading() {
 export function InlineLoading({label='Loading…'}) {
   return <div className="inline-loading" role="status"><span className="loading-orbit"/><span>{label}</span></div>;
 }
+
+export function ScreenSkeleton({kind='products'}) {
+  const label=kind==='orders'?'Loading your orders':kind==='messages'?'Loading conversations':kind==='dashboard'?'Loading workspace data':kind==='form'?'Loading account details':'Loading parts';
+  return <section className={'container section loading-screen route-skeleton '+kind} role="status" aria-label={label} aria-busy="true"><div className="route-skeleton-heading"><i className="skeleton-line short"/><i className="skeleton-line title"/><i className="skeleton-line"/></div><div className={kind==='products'?'skeleton-grid':'skeleton-records'} aria-hidden="true">{Array.from({length:kind==='products'?8:kind==='form'?4:3},(_,i)=><div className="skeleton-record" key={i}><i className="skeleton-avatar"/><div><i className="skeleton-line title"/><i className="skeleton-line"/><i className="skeleton-line short"/></div></div>)}</div><span className="sr-only">{label}. Please wait.</span></section>;
+}

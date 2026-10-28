@@ -12,6 +12,7 @@ test('database permissions and transactional commerce workflows',async()=>{
  try {
  await db.exec(`create role anon;create role authenticated;create schema auth;create schema storage;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}');create table storage.objects(bucket_id text,name text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema public,auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`);
  for(const name of ['001-schema.sql','002-commerce.sql','003-workspace.sql','007-chat-delivery.sql'])await db.exec(await readFile(new URL('../supabase/'+name,import.meta.url),'utf8'));
+ await db.exec((await readFile(new URL('../supabase/008-promotion-banners.sql',import.meta.url),'utf8')).split('-- Supabase Storage')[0]);
  for(const [role,id] of Object.entries(ids))await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3)",[id,role+'@example.test',JSON.stringify({full_name:'Test '+role,role:'admin'})]);
  assert.equal((await db.query('select role from profiles where id=$1',[ids.customer])).rows[0].role,'customer','Signup metadata must not grant admin');
  await db.query("update profiles set role='worker' where id=$1",[ids.worker]);await db.query("update profiles set role='admin' where id=$1",[ids.admin]);
@@ -90,6 +91,16 @@ test('database permissions and transactional commerce workflows',async()=>{
   await assert.rejects(()=>rpc('send_chat_message',[support,'Cannot send into a closed conversation.',null,crypto.randomUUID()]),/closed/);
   assert.ok(await rpc('send_chat_message',[support,'Message with a delivery reference.','oil','90000000-0000-4000-8000-000000000001']),'A confirmed retry remains safe after closure');
  });
+ let banner;
+ const bannerDraft={title:'Workshop offer',alt_text:'',image_url:null,mobile_image_url:null,link_path:'/shop?category=Engine%20Oil',position:1,published:false};
+ await actor('customer',async()=>{await assert.rejects(()=>rpc('admin_save_banner',[JSON.stringify(bannerDraft),null]),/permission/);});
+ await actor('worker',async()=>{await assert.rejects(()=>rpc('admin_save_banner',[JSON.stringify(bannerDraft),null]),/permission/);});
+ await actor('admin',async()=>{banner=await rpc('admin_save_banner',[JSON.stringify(bannerDraft),null]);await assert.rejects(()=>rpc('admin_save_banner',[JSON.stringify({...bannerDraft,id:banner,published:true}),1]),/constraint/);await assert.rejects(()=>rpc('admin_save_banner',[JSON.stringify({...bannerDraft,id:banner,link_path:'https://external.example'}),1]),/store page/);});
+ await actor('customer',async()=>{assert.equal((await db.query('select * from promotion_banners')).rows.length,0);});
+ await actor('admin',async()=>{await rpc('admin_save_banner',[JSON.stringify({...bannerDraft,id:banner,published:true,image_url:'https://example.test/banner.webp',alt_text:'Service essentials promotion'}),1]);await assert.rejects(()=>rpc('admin_save_banner',[JSON.stringify({...bannerDraft,id:banner}),1]),/changed/);});
+ await actor('customer',async()=>{assert.equal((await db.query('select * from promotion_banners')).rows.length,1);await assert.rejects(()=>db.exec('delete from promotion_banners'),/permission denied/);});
+ await actor('admin',async()=>{await rpc('admin_delete_banner',[banner]);});
+ assert.equal((await db.query('select * from promotion_banners')).rows.length,0);
  console.log('Verified SQL/RLS: customer isolation, role escalation prevention, authoritative prices, stock, idempotency, payment/refund states, received-only reviews, private chat, restock and incremental migration.');
  }finally{await db.close();}
 });

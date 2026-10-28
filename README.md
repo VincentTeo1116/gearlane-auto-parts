@@ -8,6 +8,8 @@ The responsive interface guides new shoppers through finding parts, checking the
 
 The customer design uses navy, warm neutrals and amber actions, with a service-focused homepage, a varied cross-category selection, keyboard-accessible search suggestions and category shortcuts. Product details, cart, checkout, account pages, order tracking and staff tools share the same visual language. The homepage selection is curated by category and is not labelled as a sales ranking.
 
+The homepage now uses a larger service showcase, illustrated category icons, focused category tiles and subtle entrance/action animations. Optional promotion advertisements appear above the showcase only when published images exist. Staff tools load in a separate JavaScript chunk; live catalogue data is cached for up to 15 seconds per account/role, with invalidation after relevant writes and realtime changes. Route-specific reads avoid fetching orders, refunds and staff records when browsing the catalogue. Stock and checkout totals remain authoritative in database functions. These reduce frontend work; they do not guarantee database response times.
+
 Feedback includes real loading skeletons, an illustrated animated 404, empty states, animated registration success and order confirmation. Email confirmation is shown as a separate next step rather than claiming the user is signed in. Order confirmation explicitly states that bank transfer is still required. Toasts announce actions, offer View cart or Undo where appropriate, pause dismissal on hover/focus, and do not take keyboard focus. Clearing the entire cart asks for confirmation. Motion respects `prefers-reduced-motion`; decorative entrance animations run once, and loading animations only represent actual pending work.
 
 Design references: [Baymard product filtering guidance](https://baymard.com/blog/ecommerce-filter-ui), [NN/g loading and interruption guidance](https://www.nngroup.com/articles/designing-for-waits-and-interruptions/), [W3C status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html), and [W3C animation from interactions](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html). These informed implementation choices; no sales uplift or accessibility certification is implied.
@@ -107,6 +109,8 @@ For a new Supabase project, review and run the current `supabase/setup.sql` once
 
 For an existing project, also review and run `supabase/007-chat-delivery.sql` before deploying the conversation update. It preserves existing messages and adds a client-message delivery reference and the role-checked `send_chat_message` function. Retrying the same message reference returns its existing ID instead of inserting a duplicate. Fresh-project `setup.sql` already includes migration 007. The original `send_message` function is retained for backward compatibility; the current interface uses the delivery-aware function.
 
+For existing projects adding homepage advertisements, review and run `supabase/008-promotion-banners.sql` once. It creates banner records, admin-only write functions, a public image bucket with admin-only uploads, and realtime updates. Fresh-project `setup.sql` includes migration 008. Do not rerun the complete setup on an existing project. No extra environment variables or service-role key are needed for banner management.
+
 1. Create your own customer account at `/account` and complete email confirmation if enabled.
 2. As project owner, use SQL Editor to promote that specific account. Replace the example address:
 
@@ -131,7 +135,17 @@ Live products deliberately start with **zero inventory and unconfirmed selling p
 | --- | --- |
 | Customer | Browse/search/filter/sort products; product specifications and source references; wishlist; quantity-based cart; Malaysian delivery address; promotion codes; bank-transfer checkout; private optional receipt upload; order history and tracking; cancel eligible unpaid orders; confirm receipt; review received purchases once; request a full-order refund; private seller chat with optional product attachment; profile and password recovery; in-app notifications. |
 | Worker | View orders and history; verify or reject submitted bank references after checking actual deposits; prepare, ship and record delivery with carrier/tracking details; review refund requests and record whether goods returned; reply to customer enquiries and reviews; private staff-to-staff conversations; request stock from admins; release expired unpaid reservations. |
-| Admin | Worker operations plus product creation/editing/archiving and image upload; user invitations, role changes, deactivation and eligible deletion; announcement and promotion CRUD; store/bank/delivery/policy settings; stock receipts; record completed refund transfers; review moderation with reason; audit history; interactive analytics. |
+| Admin | Worker operations plus product creation/editing/archiving and image upload; user invitations, role changes, deactivation and eligible deletion; announcement, promotion and homepage banner CRUD; store/bank/delivery/policy settings; stock receipts; record completed refund transfers; review moderation with reason; audit history; interactive analytics. |
+
+### Homepage promotion banners
+
+Sign in as an administrator and open **Workspace → Promotion banners** (`/workspace/banners`). Add a banner name, upload its main artwork, provide a descriptive advertisement text and optionally select a destination inside the store. Smaller display-order numbers appear first. Save unpublished artwork as a draft, or select **Publish on the homepage**. Existing banners can be edited, published, hidden or deleted. Concurrent edits are checked with a version number to prevent overwriting another administrator's changes.
+
+Uploads accept JPG, PNG and WebP up to 5 MB, with decoded dimensions no larger than 6000 × 6000 pixels. Live uploads resize and encode to WebP. Recommended artwork is **1920 × 640** for desktop and an optional **960 × 480** phone design. Artwork fits inside its frame without cropping its text. Images are public advertising assets; never upload private information. Deleting a banner removes its record, while its uploaded files remain in Storage for deliberate asset cleanup.
+
+The carousel supports touch scrolling, arrows, position indicators and optional six-second playback. Playback starts only when selected, pauses on hover/hidden tabs, stops on keyboard focus, and is disabled with reduced motion. Missing published images hide the entire section; failed image downloads are removed from the carousel. Loading images use a skeleton placeholder. With no published banners, the regular homepage starts immediately.
+
+Design references include [AutoZone's search/category shopping structure](https://www.autozone.com/), [Baymard's carousel controls research](https://baymard.com/blog/page-control-ui), [W3C carousel guidance](https://www.w3.org/WAI/tutorials/carousels/) and [NN/g skeleton-screen guidance](https://www.nngroup.com/articles/skeleton-screens/). The implementation uses original artwork and existing application styles rather than copied retailer assets.
 
 Products are archived to preserve historical orders. Accounts with orders or related records should be deactivated rather than deleted. Promotions referenced by orders are disabled rather than erasing history. Chats are human support inboxes, not an AI fitment bot. Staff can attach a product when replying. Internal conversations are visible only to their members.
 
@@ -234,6 +248,7 @@ Paths below are relative to the application root, whether this is the standalone
 | `npm run test:responsive` | Check guided flows and layouts from 320px to 1920px; requires Chromium and free port 5189 |
 | `npm run test:chat` | Check two-way chat polling, pending sends, retries, privacy and history; requires Chromium and free port 5190 |
 | `npm run test:experience` | Check customer search, cart feedback, registration, loading/success/error states and motion; requires Chromium and free port 5191 |
+| `npm run test:banners` | Check banner uploads, drafts, publishing, phone artwork, controls, access boundaries and scoped loading; requires Chromium and free port 5192 |
 | `npm run seed:sql` | Regenerate seed/setup SQL files without applying them |
 | `node scripts/check-connection.mjs` | Read public catalogue connectivity using `.env.local` |
 | `node scripts/live-browser-check.mjs` | Inspect the live local app already running on port 5173 |
@@ -265,6 +280,7 @@ npm run test:browser
 npm run test:responsive
 npm run test:chat
 npm run test:experience
+npm run test:banners
 ```
 
 The automated database test runs real Postgres through PGlite with mock Supabase Auth/Storage scaffolding. It exercises role checks, RLS customer isolation, metadata privilege escalation prevention, authoritative prices, stock, idempotency, payment/fulfilment/refund transitions, received-only reviews, chat membership, stock receipts and the incremental migration. Domain tests cover money and input validation. API tests cover authentication, origin/role checks, validation, invitation success and self-deletion rejection. Browser tests exercise the customer/worker/admin preview, checkout/payment/dispatch/receipt flows, product-attached chat, interactive analytics, mobile overflow and missing pages. Screenshots are in ignored `.generated/`.
@@ -274,6 +290,8 @@ Responsive checks cover customer and admin pages at 320, 390, 768, 1024, 1440 an
 Chat tests suppress preview push events to verify the five-second polling fallback between customer and worker tabs. They exercise pending-send locking, repeat-submit prevention, ambiguous connection failure and duplicate-safe retry, offline drafts, history preservation, private staff membership, closed conversations and polling cleanup. Unit tests cover validation, message merging, overlapping sync requests and cleanup. PGlite tests also verify the delivery-aware RPC's idempotency and validation.
 
 Customer-experience tests exercise search suggestions with keyboard selection, category expansion, cart removal/clear confirmation and undo, inline registration validation, pending submission, registration success versus email confirmation, retained guest carts, order confirmation, loading skeletons, 404 motion, reduced-motion preference, notification timing and load-error recovery. The test suite simulates loading delays and email-confirmation responses in preview mode; it does not create live accounts or claim to test email delivery. Screenshots are saved to `.generated/customer-ui/`.
+
+Banner tests cover drafts without images, upload previews, publishing, ordering, store-only links, phone artwork, native scrolling, reduced motion, deletion, worker access restrictions, broken images and delayed order loading. Route-scope tests verify that catalogue navigation avoids unrelated bulk records, and account changes cannot merge previous private records. Database tests check banner RLS, admin-only writes and conflicting versions. These tests use preview data and PGlite; authenticated upload and public-image retrieval on the deployed Supabase project still need a deployment acceptance check.
 
 During initial development verification, the live anonymous connection and browser catalogue returned 56 products, with reference-only products correctly unavailable for checkout. The initial owner confirmed the first admin grant. These results describe that configured environment; a new deployment must repeat the checks. Live email/private-storage/end-to-end payment checks still require operational configuration, and preview tests do not replace them. Production dependency auditing reported zero known vulnerabilities at that verification point; rerun audits for subsequent dependency changes. `scripts/live-browser-check.mjs` can inspect the running live local server without creating accounts or orders.
 
