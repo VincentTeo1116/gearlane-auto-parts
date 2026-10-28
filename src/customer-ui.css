@@ -1,6 +1,6 @@
 /* Customer experience: ink, warm neutrals and a single amber action colour. */
 :root { --green:#1c3547; --muted:#5c6c76; --line:#dce3e8; --lime:#f2aa67; --ink:#193345; --amber:#eea15f; color:#203849; background:#f7f8fa; }
-body { font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif; }
+body { font-family:'Manrope Variable',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif; }
 .eyebrow { color:#667782; letter-spacing:1.5px; font-size:10px; }
 .button { background:var(--ink); border-radius:8px; box-shadow:none; transition:background .18s ease,box-shadow .18s ease,transform .18s ease; }
 .button:hover:not(:disabled) { background:#2c4c60; box-shadow:0 4px 14px #203e5114; }
