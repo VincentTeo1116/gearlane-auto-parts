@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {ArrowRight, ArrowLeft, Search, ShoppingBag, Package, Heart, MessageCircle, User, Bell, Menu, X, Check, ShieldCheck, Truck, CreditCard, ClipboardCheck, Wrench, ChevronRight, CircleHelp, Settings, Boxes} from 'lucide-react';
 import {useApp, useTask} from './context.jsx';
+import {CustomerHome,CatalogueSearch} from './customer-design.jsx';
 import {Button, Link, Modal, ProductArt, Notice, Field, Empty} from './components.jsx';
 import {money, addressSchema, validate, calculateCart, STATES} from './domain.mjs';
 
@@ -19,7 +20,7 @@ export function StoreChrome() {
     <header className="store-header redesigned-header">
       <div className="container header-main">
         <Link to="/" go={go} className="brand" aria-label="GearLane home"><span className="brand-mark">G<span/></span><span>{data?.settings.store_name || 'GearLane Auto Parts'}<small>PARTS. SUPPORT. PEACE OF MIND.</small></span></Link>
-        <form className="header-search" role="search" onSubmit={e => {e.preventDefault(); go('/shop?q=' + encodeURIComponent(new FormData(e.target).get('q').trim()));}}><Search size={20}/><input name="q" type="search" maxLength={150} placeholder="Search a part, brand or part number…" aria-label="Search the catalogue"/><button type="submit">Search</button></form>
+        <CatalogueSearch/>
         <div className="header-icons">
           {profile ? <button className="icon-link notification-control" aria-label="Notifications" onClick={() => setDialog({type: 'notifications'})}><Bell size={22}/>{unread ? <small>{unread}</small> : null}</button> : null}
           <Link to="/account" go={go} className="account-link"><User size={22}/><span>{profile ? profile.full_name.split(' ')[0] : 'Sign in'}<small>{profile ? 'Your account' : 'or create an account'}</small></span></Link>
@@ -60,29 +61,7 @@ export function ShoppingSteps({current = 0}) {
   </li>)}</ol>;
 }
 
-export function StoreHome({ProductCard}) {
-  const {data, profile, go, openSupport, setDialog} = useApp();
-  const products = data.products.filter(p => p.active);
-  const categories = [...new Set(products.map(p => p.category))];
-  const popular = ['Engine Oil', 'Brake Pads', 'Filters', 'Wipers'];
-  const ownOrders = (data.orders || []).filter(o => o.customer_id === profile?.id && o.status !== 'cancelled');
-  const awaiting = ownOrders.find(o => ['awaiting', 'rejected'].includes(o.payment_status));
-  return <main className="home-redesign">
-    <section className="container welcome-grid">
-      <div className="welcome-copy"><span className="eyebrow">GEARLANE AUTO PARTS</span><h1>The right parts.<br/><em>A clearer road ahead.</em></h1><p>Find your service essentials, check the fit with our team, and follow your order every step of the way.</p>
-        <div className="actions"><Link to="/shop" go={go} className="button">Shop all parts <ArrowRight size={18}/></Link><Button variant="secondary" onClick={() => openSupport(null)}><MessageCircle size={18}/>Help me choose</Button></div>
-        <div className="popular-links"><span>Quick picks</span>{popular.filter(c => categories.includes(c)).map(c => <Link key={c} to={'/shop?category=' + encodeURIComponent(c)} go={go}>{c}<ArrowRight size={13}/></Link>)}</div>
-      </div>
-      <div className="welcome-visual"><div className="visual-heading"><span>SERVICE ESSENTIALS</span><b>A little care.<br/>A lot more miles.</b></div><div className="visual-oil"><ProductArt product={products.find(p => p.category === 'Engine Oil')}/></div><div className="visual-brake"><ProductArt product={products.find(p => p.category === 'Brake Pads')}/></div><span className="visual-footnote"><Wrench size={15}/>{products.length} products · {categories.length} categories</span></div>
-    </section>
-    {awaiting ? <section className="container resume-order"><Package size={24}/><div><b>You have an order waiting for payment</b><p>Open GL-{awaiting.order_number} to check the amount and submit your transfer reference.</p></div><Link to={'/orders/' + awaiting.id} go={go} className="button secondary">Continue order <ArrowRight size={17}/></Link></section> : null}
-    <section className="container first-order-strip"><div><span className="eyebrow">FIRST TIME HERE?</span><h2>Three steps to your next service.</h2></div><div className="mini-step"><Search/><span><b>1. Find your part</b><small>Check the specification</small></span></div><div className="mini-step"><ShoppingBag/><span><b>2. Place your order</b><small>Review delivery and total</small></span></div><div className="mini-step"><CreditCard/><span><b>3. Transfer & track</b><small>Instructions on your order</small></span></div><button className="text-link" onClick={() => setDialog({type: 'shopping-guide'})}>See how it works <ArrowRight size={16}/></button></section>
-    <section className="container section"><div className="section-heading"><div><span className="eyebrow">START WITH WHAT YOU NEED</span><h2>Shop by category</h2></div><Link className="text-link" to="/shop" go={go}>Browse all parts <ArrowRight size={17}/></Link></div><div className="category-grid">{categories.map(category => <Link key={category} to={'/shop?category=' + encodeURIComponent(category)} go={go} className="category-tile"><ProductArt product={products.find(p => p.category === category)}/><b>{category}</b><span>{products.filter(p => p.category === category).length} products <ArrowRight size={15}/></span></Link>)}</div></section>
-    {data.announcements.some(a => a.active) ? <section className="announcement-section container">{data.announcements.filter(a => a.active).slice(0,2).map(a => <div className="announcement" key={a.id}><MessageCircle size={22}/><div><b>{a.title}</b><p>{a.body}</p></div></div>)}</section> : null}
-    <section className="container section"><div className="section-heading"><div><span className="eyebrow">EXPLORE YOUR OPTIONS</span><h2>Ready for your next service</h2><p>Open any product to check its details before adding it to your cart.</p></div><Link className="text-link" to="/shop" go={go}>View all products <ArrowRight size={17}/></Link></div>{products.some(p => !p.price_confirmed) ? <Notice>Some items show a supplier reference price. Choose “Ask for price” to confirm the store’s price and availability.</Notice> : null}<div className="product-grid">{products.slice(0,8).map(p => <ProductCard key={p.id} product={p}/>)}</div></section>
-    <section className="container fitment-banner"><div><span className="eyebrow">A REAL PERSON, A CLEARER ANSWER</span><h2>Unsure if it fits?<br/>Let’s check together.</h2><p>Send us the product, your vehicle model, year and engine code. You can choose to attach the item directly to your enquiry.</p><Button onClick={() => openSupport(null)}>Ask the seller <MessageCircle size={18}/></Button></div><div className="fitment-list"><span><Check/>Vehicle model and year</span><span><Check/>Engine or chassis code</span><span><Check/>Part number and specification</span><small>Vehicle compatibility must be confirmed before purchase.</small></div></section>
-  </main>;
-}
+export function StoreHome({ProductCard}) {return <CustomerHome ProductCard={ProductCard}/>;}
 
 export function ActiveFilters() {
   const {route, go} = useApp();
@@ -93,7 +72,7 @@ export function ActiveFilters() {
 }
 
 export function GuidedCheckout({Totals}) {
-  const {data, cart, setCart, profile, repository, go, track} = useApp();
+  const {data, cart, setCart, profile, repository, go, track, setDialog} = useApp();
   const task = useTask();
   const [stage, setStage] = useState('delivery');
   const [address, setAddress] = useState({name:profile.full_name,phone:profile.phone,line1:'',city:'',postcode:'',state:'Selangor'});
@@ -108,7 +87,7 @@ export function GuidedCheckout({Totals}) {
     e.preventDefault();
     if (stage === 'delivery') {try {setAddress(validate(addressSchema,address));changeStage('review');}catch(e) {task.setError(e.message);}return;}
     const result=await task.perform(async () => {if(!accepted) throw new Error('Please confirm the item specifications and bank-transfer process.');if(error) throw new Error(error);return repository.rpc('create_order',{p_items:cart,p_address:validate(addressSchema,address),p_code:applied,p_idempotency_key:idempotency.current,p_expected_total:totals.total_cents});});
-    if(result.ok) {setCart([]);sessionStorage.removeItem('gearlane_checkout_key');go('/orders/'+result.value);}
+    if(result.ok) {setCart([]);sessionStorage.removeItem('gearlane_checkout_key');go('/orders/'+result.value);setDialog({type:'order-placed',orderId:result.value});}
   };
   if(!cart.length) return <main className="container section"><ShoppingSteps current={1}/><Empty title="Your cart is empty" action={<Link className="button" to="/shop" go={go}>Find your parts <ArrowRight size={18}/></Link>}>Add available parts before entering delivery details.</Empty></main>;
   return <main className="container section guided-checkout"><ShoppingSteps current={2}/><div className="section-heading"><div><span className="eyebrow">{stage === 'delivery' ? 'STEP 1 OF 2 · DELIVERY' : 'STEP 2 OF 2 · REVIEW'}</span><h1 ref={heading} tabIndex={-1}>{stage === 'delivery' ? 'Where should we send your order?' : 'Everything look right?'}</h1><p>{stage === 'delivery' ? 'Enter your delivery details. You can check everything before placing the order.' : 'Check your items, delivery address and total. Bank instructions come next.'}</p></div></div>

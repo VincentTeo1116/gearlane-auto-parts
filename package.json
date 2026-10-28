@@ -12,7 +12,8 @@
     "test:browser": "node scripts/browser-check.mjs",
     "seed:sql": "node scripts/generate-seed.mjs",
     "test:responsive": "node scripts/responsive-check.mjs",
-    "test:chat": "node scripts/chat-browser-check.mjs"
+    "test:chat": "node scripts/chat-browser-check.mjs",
+    "test:experience": "node scripts/customer-experience-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",

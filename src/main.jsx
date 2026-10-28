@@ -6,4 +6,5 @@ import './styles.css';
 import './details.css';
 import './experience.css';
 import './chat.css';
+import './customer-ui.css';
 createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);

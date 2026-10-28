@@ -6,6 +6,12 @@ The system includes a researched 56-product catalogue, manual bank-transfer chec
 
 The responsive interface guides new shoppers through finding parts, checking their cart, entering delivery details, reviewing the order and completing bank transfer. Product cards use labelled actions, cart confirmation links directly to the cart, and each order explains who acts next. A How to order guide is available from navigation. Guest cart items are retained when a customer signs in, including a session established after email confirmation.
 
+The customer design uses navy, warm neutrals and amber actions, with a service-focused homepage, a varied cross-category selection, keyboard-accessible search suggestions and category shortcuts. Product details, cart, checkout, account pages, order tracking and staff tools share the same visual language. The homepage selection is curated by category and is not labelled as a sales ranking.
+
+Feedback includes real loading skeletons, an illustrated animated 404, empty states, animated registration success and order confirmation. Email confirmation is shown as a separate next step rather than claiming the user is signed in. Order confirmation explicitly states that bank transfer is still required. Toasts announce actions, offer View cart or Undo where appropriate, pause dismissal on hover/focus, and do not take keyboard focus. Clearing the entire cart asks for confirmation. Motion respects `prefers-reduced-motion`; decorative entrance animations run once, and loading animations only represent actual pending work.
+
+Design references: [Baymard product filtering guidance](https://baymard.com/blog/ecommerce-filter-ui), [NN/g loading and interruption guidance](https://www.nngroup.com/articles/designing-for-waits-and-interruptions/), [W3C status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html), and [W3C animation from interactions](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html). These informed implementation choices; no sales uplift or accessibility certification is implied.
+
 Phone layouts include bottom navigation, expandable catalogue filters and labelled admin record cards. Tablet and desktop layouts use wider grids, a catalogue filter sidebar and grouped workspace navigation. The staff overview links directly to pending-payment, preparation and refund queues; administrators also see a setup checklist while checkout is disabled.
 
 **Release scope:** an implemented first release. Store configuration and authenticated deployment acceptance testing are required before accepting real orders. See [verification and security boundaries](#verification-and-security-boundaries) for tested coverage and current limits.
@@ -227,6 +233,7 @@ Paths below are relative to the application root, whether this is the standalone
 | `npm run test:browser` | Run preview browser workflows; requires Chromium and free port 5188 |
 | `npm run test:responsive` | Check guided flows and layouts from 320px to 1920px; requires Chromium and free port 5189 |
 | `npm run test:chat` | Check two-way chat polling, pending sends, retries, privacy and history; requires Chromium and free port 5190 |
+| `npm run test:experience` | Check customer search, cart feedback, registration, loading/success/error states and motion; requires Chromium and free port 5191 |
 | `npm run seed:sql` | Regenerate seed/setup SQL files without applying them |
 | `node scripts/check-connection.mjs` | Read public catalogue connectivity using `.env.local` |
 | `node scripts/live-browser-check.mjs` | Inspect the live local app already running on port 5173 |
@@ -257,6 +264,7 @@ npx playwright install chromium
 npm run test:browser
 npm run test:responsive
 npm run test:chat
+npm run test:experience
 ```
 
 The automated database test runs real Postgres through PGlite with mock Supabase Auth/Storage scaffolding. It exercises role checks, RLS customer isolation, metadata privilege escalation prevention, authoritative prices, stock, idempotency, payment/fulfilment/refund transitions, received-only reviews, chat membership, stock receipts and the incremental migration. Domain tests cover money and input validation. API tests cover authentication, origin/role checks, validation, invitation success and self-deletion rejection. Browser tests exercise the customer/worker/admin preview, checkout/payment/dispatch/receipt flows, product-attached chat, interactive analytics, mobile overflow and missing pages. Screenshots are in ignored `.generated/`.
@@ -264,6 +272,8 @@ The automated database test runs real Postgres through PGlite with mock Supabase
 Responsive checks cover customer and admin pages at 320, 390, 768, 1024, 1440 and 1920 pixels, plus worker pages at phone, tablet and desktop widths. They check horizontal overflow, filter open/close behaviour, guest-cart continuity, checkout validation and address editing, shopping guidance, mobile workspace navigation and queue filters. Screenshots are saved to `.generated/responsive/`. These are automated browser checks, not a substitute for usability sessions with real shoppers or physical-device testing.
 
 Chat tests suppress preview push events to verify the five-second polling fallback between customer and worker tabs. They exercise pending-send locking, repeat-submit prevention, ambiguous connection failure and duplicate-safe retry, offline drafts, history preservation, private staff membership, closed conversations and polling cleanup. Unit tests cover validation, message merging, overlapping sync requests and cleanup. PGlite tests also verify the delivery-aware RPC's idempotency and validation.
+
+Customer-experience tests exercise search suggestions with keyboard selection, category expansion, cart removal/clear confirmation and undo, inline registration validation, pending submission, registration success versus email confirmation, retained guest carts, order confirmation, loading skeletons, 404 motion, reduced-motion preference, notification timing and load-error recovery. The test suite simulates loading delays and email-confirmation responses in preview mode; it does not create live accounts or claim to test email delivery. Screenshots are saved to `.generated/customer-ui/`.
 
 During initial development verification, the live anonymous connection and browser catalogue returned 56 products, with reference-only products correctly unavailable for checkout. The initial owner confirmed the first admin grant. These results describe that configured environment; a new deployment must repeat the checks. Live email/private-storage/end-to-end payment checks still require operational configuration, and preview tests do not replace them. Production dependency auditing reported zero known vulnerabilities at that verification point; rerun audits for subsequent dependency changes. `scripts/live-browser-check.mjs` can inspect the running live local server without creating accounts or orders.
 
