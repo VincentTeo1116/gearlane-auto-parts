@@ -4,6 +4,10 @@ A Malaysian automotive ecommerce system with customer shopping, worker operation
 
 The system includes a researched 56-product catalogue, manual bank-transfer checkout, inventory reservations, product-attached customer support, purchase-verified reviews, refund handling and interactive business analytics. A separate local preview supports demonstrations without creating live orders.
 
+The responsive interface guides new shoppers through finding parts, checking their cart, entering delivery details, reviewing the order and completing bank transfer. Product cards use labelled actions, cart confirmation links directly to the cart, and each order explains who acts next. A How to order guide is available from navigation. Guest cart items are retained when a customer signs in, including a session established after email confirmation.
+
+Phone layouts include bottom navigation, expandable catalogue filters and labelled admin record cards. Tablet and desktop layouts use wider grids, a catalogue filter sidebar and grouped workspace navigation. The staff overview links directly to pending-payment, preparation and refund queues; administrators also see a setup checklist while checkout is disabled.
+
 **Release scope:** an implemented first release. Store configuration and authenticated deployment acceptance testing are required before accepting real orders. See [verification and security boundaries](#verification-and-security-boundaries) for tested coverage and current limits.
 
 ## Contents
@@ -207,6 +211,7 @@ Paths below are relative to the application root, whether this is the standalone
 | `npm run preview` | Preview the built frontend locally; does not run Vercel functions |
 | `npm test` | Run domain, API and database tests |
 | `npm run test:browser` | Run preview browser workflows; requires Chromium and free port 5188 |
+| `npm run test:responsive` | Check guided flows and layouts from 320px to 1920px; requires Chromium and free port 5189 |
 | `npm run seed:sql` | Regenerate seed/setup SQL files without applying them |
 | `node scripts/check-connection.mjs` | Read public catalogue connectivity using `.env.local` |
 | `node scripts/live-browser-check.mjs` | Inspect the live local app already running on port 5173 |
@@ -235,9 +240,12 @@ npm test
 npm run build
 npx playwright install chromium
 npm run test:browser
+npm run test:responsive
 ```
 
 The automated database test runs real Postgres through PGlite with mock Supabase Auth/Storage scaffolding. It exercises role checks, RLS customer isolation, metadata privilege escalation prevention, authoritative prices, stock, idempotency, payment/fulfilment/refund transitions, received-only reviews, chat membership, stock receipts and the incremental migration. Domain tests cover money and input validation. API tests cover authentication, origin/role checks, validation, invitation success and self-deletion rejection. Browser tests exercise the customer/worker/admin preview, checkout/payment/dispatch/receipt flows, product-attached chat, interactive analytics, mobile overflow and missing pages. Screenshots are in ignored `.generated/`.
+
+Responsive checks cover customer and admin pages at 320, 390, 768, 1024, 1440 and 1920 pixels, plus worker pages at phone, tablet and desktop widths. They check horizontal overflow, filter open/close behaviour, guest-cart continuity, checkout validation and address editing, shopping guidance, mobile workspace navigation and queue filters. Screenshots are saved to `.generated/responsive/`. These are automated browser checks, not a substitute for usability sessions with real shoppers or physical-device testing.
 
 During initial development verification, the live anonymous connection and browser catalogue returned 56 products, with reference-only products correctly unavailable for checkout. The initial owner confirmed the first admin grant. These results describe that configured environment; a new deployment must repeat the checks. Live email/private-storage/end-to-end payment checks still require operational configuration, and preview tests do not replace them. Production dependency auditing reported zero known vulnerabilities at that verification point; rerun audits for subsequent dependency changes. `scripts/live-browser-check.mjs` can inspect the running live local server without creating accounts or orders.
 

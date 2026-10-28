@@ -10,7 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs",
     "test:browser": "node scripts/browser-check.mjs",
-    "seed:sql": "node scripts/generate-seed.mjs"
+    "seed:sql": "node scripts/generate-seed.mjs",
+    "test:responsive": "node scripts/responsive-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",
