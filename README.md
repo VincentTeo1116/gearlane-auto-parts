@@ -95,6 +95,8 @@ npm run dev:demo
 
 The yellow banner identifies preview mode. Its records live in this browser's local storage, not Supabase. Customer, worker and admin account selectors appear on the sign-in page. These credentials grant no live access. To reset the demonstration, remove the `gearlane_preview_v1` local-storage entry and reload. Sign-in is per tab, so separate tabs can demonstrate different roles. Preview accounts use the displayed fixed passwords; no actual emails, deposits, orders or transfers occur.
 
+New previews also include 84 additional fictional orders, 12 sample customers, reviews/refunds, wishlist/activity records and available/low/sold-out stock. Older previews can add them once with **Load sample report data** on the admin overview. To populate a separate **testing Supabase project**, follow [sample report and inventory instructions](docs/SAMPLE_DATA.md). The optional SQL example preserves existing records/settings/prices, includes duplicate protection and has a guarded cleanup script. It is excluded from normal setup and never loads into a live database automatically.
+
 | Preview role | Email | Password |
 | --- | --- | --- |
 | Customer | `customer@gearlane.demo` | `DemoCustomer123!` |
@@ -252,6 +254,7 @@ Paths below are relative to the application root, whether this is the standalone
 | `npm run test:experience` | Check customer search, cart feedback, registration, loading/success/error states and motion; requires Chromium and free port 5191 |
 | `npm run test:banners` | Check banner uploads, drafts, publishing, phone artwork, controls, access boundaries and scoped loading; requires Chromium and free port 5192 |
 | `npm run seed:sql` | Regenerate seed/setup SQL files without applying them |
+| `npm run seed:examples` | Regenerate the separate fictional analytics SQL example; does not contact Supabase |
 | `node scripts/check-connection.mjs` | Read public catalogue connectivity using `.env.local` |
 | `node scripts/live-browser-check.mjs` | Inspect the live local app already running on port 5173 |
 
