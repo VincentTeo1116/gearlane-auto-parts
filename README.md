@@ -99,6 +99,8 @@ Do not rerun the entire setup on an initialized project: its policy creation is 
 
 For a new Supabase project, review and run the current `supabase/setup.sql` once in SQL Editor. It already includes the hardening changes. The individual scripts are retained for review. Storage buckets and realtime publication membership are created by setup. `npm run seed:sql` regenerates the catalogue seed and fresh-project setup; it does not contact the database.
 
+For an existing project, also review and run `supabase/007-chat-delivery.sql` before deploying the conversation update. It preserves existing messages and adds a client-message delivery reference and the role-checked `send_chat_message` function. Retrying the same message reference returns its existing ID instead of inserting a duplicate. Fresh-project `setup.sql` already includes migration 007. The original `send_message` function is retained for backward compatibility; the current interface uses the delivery-aware function.
+
 1. Create your own customer account at `/account` and complete email confirmation if enabled.
 2. As project owner, use SQL Editor to promote that specific account. Replace the example address:
 
@@ -126,6 +128,18 @@ Live products deliberately start with **zero inventory and unconfirmed selling p
 | Admin | Worker operations plus product creation/editing/archiving and image upload; user invitations, role changes, deactivation and eligible deletion; announcement and promotion CRUD; store/bank/delivery/policy settings; stock receipts; record completed refund transfers; review moderation with reason; audit history; interactive analytics. |
 
 Products are archived to preserve historical orders. Accounts with orders or related records should be deactivated rather than deleted. Promotions referenced by orders are disabled rather than erasing history. Chats are human support inboxes, not an AI fitment bot. Staff can attach a product when replying. Internal conversations are visible only to their members.
+
+### Conversation system
+
+Customer support and private staff chat use a persistent conversation view with message history, optional support-product attachments and sender timestamps. Supabase Realtime updates are supplemented by automatic **five-second polling** while the page is open. Sync also runs after reconnection or returning to the tab. Requests are coalesced to prevent overlapping polls, and timers/listeners are removed when leaving chat. Browser background-tab throttling and network delays can affect exact timing.
+
+Each send shows a pending bubble, locks the Send button and keeps the draft until delivery is confirmed. An unconfirmed send offers an explicit retry using the same unique reference, or Keep as draft. Draft references survive that action so an unchanged retry remains duplicate-safe. Drafts are held in page memory per conversation, not saved to local storage; leaving/reloading the page discards unsent draft text. A successful server response is shown as Sent, not as proof that the recipient has read the message.
+
+Incoming sync preserves loaded older history. Reading older messages does not force the view to jump; a New messages button returns to the latest message. Enter sends a message, Shift+Enter inserts a line break, and composition input is respected. Closed conversations reject new sends. Customer-support attachments must reference an active product; private staff conversations do not accept product attachments.
+
+The interface and delivery-aware database function validate meaningful text, the 2,000-character limit, unsupported control characters, conversation access and product attachment eligibility. The database also enforces its message rate limit and active membership. Messages are rendered as escaped plain text. A visible reminder asks everyone to avoid sharing passwords, OTP/TAC codes, PINs, card numbers, CVV codes and other private sensitive information, and directs payment receipts to the order page. This reminder is guidance, not automated sensitive-data detection or an end-to-end encryption claim.
+
+Implementation references: [Supabase Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes), [React effect cleanup](https://react.dev/reference/react/useEffect), and [OWASP input validation](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html).
 
 Analytics include verified paid order value, average paid order, active signed-in customers, customer account types, category purchases, wishlist categories and customer activity by Malaysia hour. Period controls support 7/30/90 days; chart bars and breakdowns are clickable. Sales are grouped by order creation date and exclude completed paid refunds. Category value is before order-level discounts. Account-type and wishlist breakdowns are all-time; activity excludes anonymous visitors. These are operational sales metrics, not profit or attribution reporting.
 
@@ -212,6 +226,7 @@ Paths below are relative to the application root, whether this is the standalone
 | `npm test` | Run domain, API and database tests |
 | `npm run test:browser` | Run preview browser workflows; requires Chromium and free port 5188 |
 | `npm run test:responsive` | Check guided flows and layouts from 320px to 1920px; requires Chromium and free port 5189 |
+| `npm run test:chat` | Check two-way chat polling, pending sends, retries, privacy and history; requires Chromium and free port 5190 |
 | `npm run seed:sql` | Regenerate seed/setup SQL files without applying them |
 | `node scripts/check-connection.mjs` | Read public catalogue connectivity using `.env.local` |
 | `node scripts/live-browser-check.mjs` | Inspect the live local app already running on port 5173 |
@@ -241,11 +256,14 @@ npm run build
 npx playwright install chromium
 npm run test:browser
 npm run test:responsive
+npm run test:chat
 ```
 
 The automated database test runs real Postgres through PGlite with mock Supabase Auth/Storage scaffolding. It exercises role checks, RLS customer isolation, metadata privilege escalation prevention, authoritative prices, stock, idempotency, payment/fulfilment/refund transitions, received-only reviews, chat membership, stock receipts and the incremental migration. Domain tests cover money and input validation. API tests cover authentication, origin/role checks, validation, invitation success and self-deletion rejection. Browser tests exercise the customer/worker/admin preview, checkout/payment/dispatch/receipt flows, product-attached chat, interactive analytics, mobile overflow and missing pages. Screenshots are in ignored `.generated/`.
 
 Responsive checks cover customer and admin pages at 320, 390, 768, 1024, 1440 and 1920 pixels, plus worker pages at phone, tablet and desktop widths. They check horizontal overflow, filter open/close behaviour, guest-cart continuity, checkout validation and address editing, shopping guidance, mobile workspace navigation and queue filters. Screenshots are saved to `.generated/responsive/`. These are automated browser checks, not a substitute for usability sessions with real shoppers or physical-device testing.
+
+Chat tests suppress preview push events to verify the five-second polling fallback between customer and worker tabs. They exercise pending-send locking, repeat-submit prevention, ambiguous connection failure and duplicate-safe retry, offline drafts, history preservation, private staff membership, closed conversations and polling cleanup. Unit tests cover validation, message merging, overlapping sync requests and cleanup. PGlite tests also verify the delivery-aware RPC's idempotency and validation.
 
 During initial development verification, the live anonymous connection and browser catalogue returned 56 products, with reference-only products correctly unavailable for checkout. The initial owner confirmed the first admin grant. These results describe that configured environment; a new deployment must repeat the checks. Live email/private-storage/end-to-end payment checks still require operational configuration, and preview tests do not replace them. Production dependency auditing reported zero known vulnerabilities at that verification point; rerun audits for subsequent dependency changes. `scripts/live-browser-check.mjs` can inspect the running live local server without creating accounts or orders.
 

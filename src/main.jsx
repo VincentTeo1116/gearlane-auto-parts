@@ -5,4 +5,5 @@ import {ErrorBoundary} from './components.jsx';
 import './styles.css';
 import './details.css';
 import './experience.css';
+import './chat.css';
 createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);

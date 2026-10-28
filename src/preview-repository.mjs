@@ -1,5 +1,5 @@
 import {catalogue} from './catalogue.mjs';
-import {addressSchema,calculateCart,canCancel,canReview,canTransition,validate} from './domain.mjs';
+import {addressSchema,calculateCart,canCancel,canReview,canTransition,validate,messageSchema} from './domain.mjs';
 const KEY='gearlane_preview_v1',SESSION='gearlane_preview_session';
 const ids={customer:'10000000-0000-4000-8000-000000000001',worker:'10000000-0000-4000-8000-000000000002',admin:'10000000-0000-4000-8000-000000000003'};
 const clone=x=>structuredClone(x),now=()=>new Date().toISOString(),uuid=()=>crypto.randomUUID();
@@ -25,6 +25,16 @@ export function createPreviewRepository(){
  let authCallback=()=>{};
  const api={
  mode:'preview',
+ async conversations(){const u=requireRole(['customer','worker','admin']);read();return clone(state.conversations.filter(c=>access(c,u)));},
+ async sendMessage({conversationId,body,productId=null,clientId}){
+  read();const u=requireRole(['customer','worker','admin']);
+  const v=validate(messageSchema,{body,product_id:productId});
+  if(!/^[0-9a-f-]{36}$/i.test(clientId||''))throw new Error('A message delivery reference is required.');
+  const existing=state.messages.find(m=>m.sender_id===u.id&&m.client_message_id===clientId);
+  if(existing){if(existing.conversation_id!==conversationId||existing.body!==v.body||(existing.product_id||null)!==(v.product_id||null))throw new Error('This delivery reference belongs to a different message.');return existing.id;}
+  const id=await api.rpc('send_message',{p_conversation_id:conversationId,p_body:v.body,p_product_id:v.product_id});
+  state.messages.find(m=>m.id===id).client_message_id=clientId;save();return id;
+ },
  async order(id){const u=current();return clone(read().orders.find(o=>o.id===id&&u&&(u.role!=='customer'||o.customer_id===u.id))||null);},
  async session(){const u=current();return u?{id:u.id,email:u.email}:null;},
  onAuth(cb){authCallback=cb;return()=>{authCallback=()=>{};};},
@@ -63,7 +73,7 @@ export function createPreviewRepository(){
    case 'moderate_review':{requireRole(['admin']);const r=state.reviews.find(r=>r.id===p.p_review_id);if(!r||p.p_reason.length<5)throw new Error('Record a moderation reason.');r.published=p.p_published;break;}
    case 'start_conversation':{requireRole(['customer','worker','admin']);if(p.p_kind==='support'){requireRole(['customer']);let c=state.conversations.find(c=>c.kind==='support'&&c.customer_id===u.id&&!c.closed_at);if(!c){c={id:uuid(),kind:'support',customer_id:u.id,title:'Customer support',created_by:u.id,members:[{user_id:u.id,last_read_at:'1970-01-01'}],created_at:now()};state.conversations.unshift(c);}value=c.id;}else{requireRole(['worker','admin']);if(!state.users.some(s=>s.id===p.p_recipient_id&&s.is_active&&s.role!=='customer')||p.p_recipient_id===u.id)throw new Error('Choose another staff member.');const c={id:uuid(),kind:'internal',title:'Staff conversation',created_by:u.id,members:[{user_id:u.id,last_read_at:'1970-01-01'},{user_id:p.p_recipient_id,last_read_at:'1970-01-01'}],created_at:now()};state.conversations.unshift(c);value=c.id;}break;}
    case 'send_message':{requireRole(['customer','worker','admin']);const c=state.conversations.find(c=>c.id===p.p_conversation_id);if(!access(c,u)||c.closed_at)throw new Error('Conversation unavailable or closed.');if(!p.p_body?.trim()||p.p_body.length>2000)throw new Error('Write a message from 1 to 2000 characters.');const product=p.p_product_id?state.products.find(x=>x.id===p.p_product_id&&x.active):null;if(p.p_product_id&&!product)throw new Error('Attached product unavailable.');const m={id:uuid(),conversation_id:c.id,sender_id:u.id,sender_name:u.full_name,body:p.p_body,product_id:product?.id||null,product_name:product?.name||null,created_at:now()};state.messages.push(m);if(c.kind==='support'&&u.role==='customer')staff('Support message','A customer is waiting.','/workspace/messages');else if(c.kind==='support')notify(c.customer_id,'Support replied','The store has replied.','/messages');else c.members.filter(m=>m.user_id!==u.id).forEach(m=>notify(m.user_id,'Staff message','You have a new staff message.','/workspace/messages'));value=m.id;break;}
-   case 'manage_conversation':{requireRole(['customer','worker','admin']);const c=state.conversations.find(c=>c.id===p.p_conversation_id);if(!access(c,u))throw new Error('Conversation unavailable.');if(p.p_action==='read'){let m=c.members.find(m=>m.user_id===u.id);if(!m){m={user_id:u.id};c.members.push(m);}m.last_read_at=now();}else{requireRole(['worker','admin']);if(p.p_action==='assign')c.assigned_to=u.id;else if(p.p_action==='close')c.closed_at=now();else throw new Error('Unknown action.');}break;}
+   case 'manage_conversation':{requireRole(p.p_action==='read'?['customer','worker','admin']:['worker','admin']);const c=state.conversations.find(c=>c.id===p.p_conversation_id);if(!access(c,u))throw new Error('Conversation unavailable.');if(p.p_action==='read'){let m=c.members.find(m=>m.user_id===u.id);if(!m){m={user_id:u.id};c.members.push(m);}m.last_read_at=now();}else{if(p.p_action==='assign')c.assigned_to=u.id;else if(p.p_action==='close')c.closed_at=now();else throw new Error('Unknown action.');}break;}
    case 'read_notifications':{requireRole(['customer','worker','admin']);state.notifications.filter(n=>n.user_id===u.id&&!n.read_at).forEach(n=>n.read_at=now());break;}
    case 'request_restock':{requireRole(['worker','admin']);if(p.p_quantity<1||p.p_reason.length<5)throw new Error('Enter a quantity and reason.');if(state.restock.some(r=>r.product_id===p.p_product_id&&r.requester_id===u.id&&r.status!=='resolved'))throw new Error('An open request already exists.');const r={id:uuid(),product_id:p.p_product_id,requester_id:u.id,quantity:p.p_quantity,reason:p.p_reason,status:'open',created_at:now()};state.restock.unshift(r);staff('Restock requested','Review the stock request.','/workspace/restock',true);value=r.id;break;}
    case 'resolve_restock':{requireRole(['admin']);const r=state.restock.find(r=>r.id===p.p_request_id);if(!r||r.status==='resolved'||p.p_units_received<1)throw new Error('Request unavailable or invalid quantity.');const product=state.products.find(x=>x.id===r.product_id);product.stock+=p.p_units_received;product.version++;r.status='resolved';r.admin_note=p.p_note;r.resolved_at=now();notify(r.requester_id,'Stock received',p.p_note,'/workspace/restock');break;}

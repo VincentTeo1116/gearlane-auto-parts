@@ -38,3 +38,5 @@ jobs:
         run: npm run test:browser
       - name: Verify responsive layouts and guided flows
         run: npm run test:responsive
+      - name: Verify chat delivery and five-second sync
+        run: npm run test:chat

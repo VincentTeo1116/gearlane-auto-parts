@@ -35,6 +35,8 @@ function createLiveRepository(){
    return Object.fromEntries(entries);
   },
   rpc,
+  conversations(){return result(supabase.from('conversations').select('*,members:conversation_members(*)').order('created_at',{ascending:false}).limit(100));},
+  sendMessage({conversationId,body,productId=null,clientId}){return rpc('send_chat_message',{p_conversation_id:conversationId,p_body:body,p_product_id:productId,p_client_message_id:clientId});},
   order(id){return result(supabase.from('orders').select('*,items:order_items(*),events:order_events(*)').eq('id',id).maybeSingle());},
   messages(id,before){let q=supabase.from('messages').select('*').eq('conversation_id',id).order('created_at',{ascending:false}).limit(100);if(before)q=q.lt('created_at',before);return result(q);},
   stats(days){return rpc('dashboard_stats',{p_days:days});},
