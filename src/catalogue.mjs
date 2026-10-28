@@ -1,0 +1,2 @@
+import researched from '../data/catalogue.json';
+export const catalogue = researched.map(p=>({id:p.id.slice(0,100),sku:p.sku,name:p.name,brand:p.brand,category:p.category,description:p.description,specs:p.specs,price_cents:Math.round(p.price*100),reference_price_cents:Math.round(p.price*100),price_confirmed:false,stock:0,image_url:p.imageUrl,fitment_note:p.fitmentNote,source_url:p.sourceUrl,price_source_url:p.priceSourceUrl,source_observed_at:p.observedAt,source_note:p.priceNote,active:true,version:1}));
