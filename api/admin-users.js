@@ -2,6 +2,17 @@ import {createClient} from '@supabase/supabase-js';
 import {z} from 'zod';
 const invitation=z.object({name:z.string().trim().min(2).max(100),email:z.email().max(254),role:z.enum(['customer','worker','admin'])}).strict();
 const deletion=z.object({id:z.uuid()}).strict();
+function invitationFailure(error){
+ const code=String(error?.code||''),message=String(error?.message||'');
+ if(['over_email_send_rate_limit','over_request_rate_limit'].includes(code)||error?.status===429||/rate.?limit|too many (?:requests|emails)/i.test(message))return{status:429,code:'invitation_rate_limited',error:'Supabase email sending is rate-limited. Wait for the quota to reset before retrying. For regular invitations, configure custom SMTP in Supabase Authentication settings.'};
+ if(['email_exists','user_already_exists'].includes(code)||/already.*(?:registered|exists)/i.test(message))return{status:409,code:'invitation_email_exists',error:'An account already exists for this email. Review its status in Users & roles or Supabase Authentication → Users instead of creating another account.'};
+ if(code==='email_address_not_authorized'||/can only send.*email|email.*not authorized/i.test(message))return{status:422,code:'invitation_recipient_restricted',error:'Supabase email delivery is restricted for this recipient. Configure custom SMTP in Supabase Authentication settings to invite other email addresses.'};
+ if(code==='email_address_invalid')return{status:422,code:'invitation_invalid_email',error:'Supabase rejected this email address. Check the address before retrying.'};
+ if(['signup_disabled','email_provider_disabled'].includes(code))return{status:503,code:'invitation_email_disabled',error:'Email invitations are disabled in Supabase. Review the email provider and signup settings.'};
+ if(['not_admin','no_authorization','bad_jwt'].includes(code)||[401,403].includes(error?.status))return{status:503,code:'invitation_server_config',error:'Supabase rejected the server invitation credentials. Verify that SUPABASE_SERVICE_ROLE_KEY belongs to the configured Supabase project.'};
+ if(Number(error?.status)>=500)return{status:502,code:'invitation_delivery_failed',error:'Supabase could not send the invitation. Check Authentication logs and SMTP settings before retrying.'};
+ return{status:400,code:'invitation_rejected',error:'Supabase rejected the invitation. Check its Authentication logs for the detailed reason.'};
+}
 export function createHandler({client=createClient,env=process.env}={}){
  return async(req,res)=>{
   res.setHeader('Cache-Control','no-store');
@@ -28,7 +39,8 @@ export function createHandler({client=createClient,env=process.env}={}){
    if(req.method==='POST'){
     const value=parsed.data;
     const {data,error}=await service.auth.admin.inviteUserByEmail(value.email,{redirectTo:origin+'/account?reset=1',data:{full_name:value.name}});
-    if(error||!data?.user)return fail(400,'Invitation failed. Check whether the email already exists and inspect Supabase email delivery.');
+    if(error){const failure=invitationFailure(error);return res.status(failure.status).json({error:failure.error,code:failure.code});}
+    if(!data?.user)return fail(502,'Supabase did not confirm an invited account. Check Authentication logs before retrying.');
     const assigned=await caller.rpc('admin_update_profile',{p_user_id:data.user.id,p_name:value.name,p_role:value.role,p_active:true});
     if(assigned.error){await service.auth.admin.deleteUser(data.user.id);return fail(409,'Role assignment failed. Refresh and try again.');}
     return res.status(201).json({id:data.user.id,message:'Invitation created.'});

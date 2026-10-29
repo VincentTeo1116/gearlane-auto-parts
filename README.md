@@ -279,6 +279,8 @@ The [CI workflow](.github/workflows/ci.yml) installs dependencies, runs automate
 | Transfer remains submitted | A worker/admin must verify the actual deposit before preparing the order. No automated bank matching runs. |
 | Review button missing | The buyer must confirm receipt of a paid order. A product already reviewed for that order cannot be reviewed again. |
 | Invitation/deletion fails locally | Use a Vercel environment with the server-only variables; Vite alone does not run the API. Confirm `SITE_URL` matches the requesting origin. |
+| Invitation returns 429 | Supabase email/request quota is exhausted. Wait for it to reset; configure custom SMTP for regular invitations and check Authentication rate limits. The built-in email service has restricted recipients and a small quota: see [Supabase SMTP guidance](https://supabase.com/docs/guides/auth/auth-smtp). The API preserves 429 and displays a specific recovery message. |
+| Font blocked by `font-src 'self'` | Redeploy the current build. `vite.config.js` prevents font inlining, including small Manrope subsets, so fonts load as same-origin WOFF2 files. Keep the existing CSP; allowing `data:` fonts is unnecessary. |
 | Confirmation/recovery email missing | Check Supabase Auth redirect configuration, SMTP delivery and email logs, plus the recipient's spam folder. |
 | Receipt link expires | Use View private receipt again to generate a new short-lived signed link. |
 | Browser tests cannot start | Install Chromium using `npx playwright install chromium` and ensure port 5188 is available. |
