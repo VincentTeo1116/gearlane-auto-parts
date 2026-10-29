@@ -68,6 +68,16 @@ test('signed-out visitors and customers cannot read bank details, list promotion
   });
   await as('customer',async()=>assert.equal((await db.query('select customer_id,order_id from reviews')).rows.length,1,'the owner still sees which order they reviewed'));
 
+  // Dashboard comparison: admin only, and only the equal window just before the selected one
+  await db.exec(await readFile(new URL('../supabase/011-analytics-previous-period.sql',import.meta.url),'utf8'));
+  const orderAt=(n,days,total,payment)=>db.exec(`insert into orders(customer_id,address,subtotal_cents,discount_cents,shipping_cents,total_cents,idempotency_key,payment_instructions,status,payment_status,created_at) values('${ids.customer}','{}',${total},0,0,${total},'40000000-0000-4000-8000-00000000000${n}','{}','processing','${payment}',now()-interval '${days} days')`);
+  await orderAt(1,5,1000,'verified');await orderAt(2,40,2000,'verified');await orderAt(3,50,4000,'verified');await orderAt(4,45,8000,'submitted');await orderAt(5,70,16000,'verified');
+  const previous=await as('admin',()=>rpc('dashboard_previous_period',[30]));
+  assert.equal(Number(previous.paid_sales_cents),6000,'days 31-60 ago, verified only');assert.equal(Number(previous.paid_orders),2);
+  assert.equal(Number((await as('admin',()=>rpc('dashboard_stats',[30]))).paid_sales_cents),11000,'current period = the 10,000 review-test order plus today-5-days 1,000; older orders excluded');
+  for(const role of ['anon','customer','worker'])await as(role,async()=>assert.rejects(()=>rpc('dashboard_previous_period',[30]),/permission/));
+  await as('admin',async()=>assert.rejects(()=>rpc('dashboard_previous_period',[14]),/Choose 7, 30 or 90/));
+
   // Products and announcements stay public for the storefront
   await as('anon',async()=>assert.equal((await db.query('select id from products')).rows.length,1));
  }finally{await db.close();}

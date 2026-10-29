@@ -1,4 +1,5 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
+import {reportError} from './error-reporting.mjs';
 import {X,AlertCircle,Package,ArrowLeft,LoaderCircle,CheckCircle2,Info} from 'lucide-react';
 import {EmptyVisual,DetourVisual} from './visuals.jsx';
 export function Link({to,go,children,...props}){return <a href={to} onClick={e=>{if(!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.button===0){e.preventDefault();go(to);}}} {...props}>{children}</a>;}
@@ -28,5 +29,5 @@ export function ProductArt({product,className=''}){
  <><rect x="65" y="66" width="130" height="120" rx="10" fill="#315164"/><path d="m65 66 26-20h128l-24 20" fill="#7c969f"/><rect x="83" y="95" width="93" height="55" rx="4" fill={accent}/><path d="m115 108-13 14 13 14m31-28 13 14-13 14" fill="none" stroke="#f9faf4" strokeWidth="6"/></>}
  </svg><span className="art-note">Product illustration</span></div>;
 }
-export class ErrorBoundary extends React.Component{state={error:null};static getDerivedStateFromError(error){return{error};}render(){if(this.state.error)return <main className="fatal"><AlertCircle size={36}/><h1>Something didn’t load correctly.</h1><p>Your action has not been confirmed. Reload and check your orders before placing another order.</p><div className="actions"><Button onClick={()=>location.reload()}>Reload page</Button><a href="/">Go to store</a></div></main>;return this.props.children;}}
+export class ErrorBoundary extends React.Component{state={error:null};static getDerivedStateFromError(error){return{error};}componentDidCatch(error){reportError(error,'render');}render(){if(this.state.error)return <main className="fatal"><AlertCircle size={36}/><h1>Something didn’t load correctly.</h1><p>Your action has not been confirmed. Reload and check your orders before placing another order.</p><div className="actions"><Button onClick={()=>location.reload()}>Reload page</Button><a href="/">Go to store</a></div></main>;return this.props.children;}}
 export function NotFound({go}){return <main className="not-found"><DetourVisual/><span className="eyebrow">A SMALL DETOUR</span><h1>That page took a wrong turn.</h1><p>The page may have moved or the link may be incorrect.</p><div className="actions"><Button onClick={()=>history.length>1?history.back():go('/')}><ArrowLeft size={16}/>Go back</Button><Button variant="secondary" onClick={()=>go('/')}>Browse the store</Button></div></main>;}

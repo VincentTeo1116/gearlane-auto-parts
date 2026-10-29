@@ -8,7 +8,7 @@
     "dev:demo": "vite --mode demo --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs tests/chat.test.mjs tests/loading-banners.test.mjs tests/sample-scenario.test.mjs tests/sample-database.test.mjs tests/chat-inbox.test.mjs tests/review-tags.test.mjs tests/privacy.test.mjs",
+    "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs tests/chat.test.mjs tests/loading-banners.test.mjs tests/sample-scenario.test.mjs tests/sample-database.test.mjs tests/chat-inbox.test.mjs tests/review-tags.test.mjs tests/privacy.test.mjs tests/ops-api.test.mjs tests/dashboard-math.test.mjs tests/csv.test.mjs tests/seo.test.mjs tests/order-email.test.mjs tests/features-db.test.mjs tests/fitment.test.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "seed:sql": "node scripts/generate-seed.mjs",
     "test:responsive": "node scripts/responsive-check.mjs",
@@ -18,19 +18,21 @@
     "seed:examples": "node scripts/generate-sample-data.mjs",
     "test:chat-ui": "node scripts/chat-layout-check.mjs",
     "test:chat-inbox": "node scripts/chat-inbox-check.mjs",
-    "test:design": "node scripts/design-check.mjs"
+    "test:design": "node scripts/design-check.mjs",
+    "test:load": "node scripts/load-check.mjs",
+    "test:features": "node scripts/features-check.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/manrope": "^5.3.0",
-    "@supabase/supabase-js": "latest",
-    "lucide-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "zod": "latest"
+    "@fontsource-variable/manrope": "5.3.0",
+    "@supabase/supabase-js": "2.118.0",
+    "lucide-react": "1.62.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "latest",
-    "playwright": "^1.64.1",
-    "vite": "latest"
+    "@electric-sql/pglite": "0.5.12",
+    "playwright": "1.64.1",
+    "vite": "8.3.5"
   }
 }

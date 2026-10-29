@@ -76,7 +76,7 @@ body { background: var(--page); }
 @media (min-width: 1024px) {
   .workspace-sidebar { display: flex; flex-direction: column; position: sticky; top: 0; height: 100dvh; align-self: flex-start; overflow: hidden; }
   body:has(.preview-banner) .workspace-sidebar { top: 42px; height: calc(100dvh - 42px); }
-  .workspace-sidebar nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); padding-bottom: 18px; }
+  .workspace-sidebar nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 8px; }
   .workspace-sidebar-bottom { flex: 0 0 auto; }
 }
 .workspace-sidebar { background: linear-gradient(180deg, #172c3d, #13232f); }
@@ -298,3 +298,11 @@ body:has(.workspace) .preview-banner { position: sticky; top: 0; z-index: 90; }
   .brand { gap: 7px; }
   .brand > span:last-child { font-size: .9375rem; }
 }
+
+/* Period-over-period change on the KPI cards: arrow + words, never colour alone */
+.delta { display: inline-flex; align-items: center; font-weight: 750; font-size: .8125rem; padding: 2px 8px; border-radius: 99px; margin: 2px 0 4px; width: fit-content; }
+.delta.up { background: #e4f4ea; color: #1b5e37; }
+.delta.down { background: #fbe6e3; color: #8a2f28; }
+.delta.flat { background: #eef2f5; color: var(--ink-soft); }
+.kpi-grid .stat-card { display: flex; flex-direction: column; align-items: flex-start; }
+.kpi-grid .stat-card > div { align-self: stretch; }

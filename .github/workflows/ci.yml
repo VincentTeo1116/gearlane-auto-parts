@@ -48,3 +48,11 @@ jobs:
         run: npm run test:experience
       - name: Verify promotion banners and scoped loading
         run: npm run test:banners
+      - name: Verify design system, reviews, promo privacy and phone header
+        run: npm run test:design
+      - name: Verify vehicle finder, stock alerts, SEO metadata and comparison labels
+        run: npm run test:features
+      - name: Verify behaviour with a large catalogue and order history
+        run: npm run test:load
+      - name: Check production dependencies for known vulnerabilities
+        run: npm audit --omit=dev --audit-level=high

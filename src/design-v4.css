@@ -1,0 +1,117 @@
+/* Design refresh v4: vehicle finder, stock alerts, fitment, and the staff management pages.
+   Loaded last; reuses the tokens from design-refresh.css and design-v3.css. */
+
+/* ======================================================================
+   Vehicle finder (shop page)
+   ====================================================================== */
+.vehicle-bar { display: grid; gap: 12px; margin: 0 0 16px; padding: 14px 18px; background: #fff; border: 1px solid var(--card-line); border-left: 4px solid var(--accent); border-radius: 14px; }
+.vehicle-title { display: flex; align-items: center; gap: 12px; }
+.vehicle-title > svg { color: var(--accent); background: var(--accent-soft); width: 40px; height: 40px; padding: 9px; border-radius: 11px; box-sizing: border-box; }
+.vehicle-title b { display: block; color: var(--ink); }
+.vehicle-title small { color: var(--muted); font-size: .875rem; }
+.vehicle-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.vehicle-fields label { flex: 1 1 150px; min-width: 0; }
+.vehicle-fields select { width: 100%; min-height: 44px; border-radius: 10px; border-color: #c5d3dc; background: #fff; font-weight: 600; }
+.vehicle-fields select:disabled { background: var(--surface-soft); color: #7b8b97; }
+.vehicle-clear, .vehicle-saved { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 10px; font-weight: 650; white-space: nowrap; }
+.vehicle-clear { border: 1px solid #c5d3dc; background: #fff; color: var(--ink-soft); }
+.vehicle-saved { border: 1px dashed var(--accent); background: var(--accent-soft); color: #7c2d12; }
+.vehicle-summary { margin: 0; padding: 10px 12px; border-radius: 10px; background: #eef7f1; color: #1f5230; font-size: .9375rem; }
+.vehicle-unlisted { margin: -4px 0 14px; padding: 0 4px; color: var(--ink-soft); }
+@media (max-width: 760px) { .vehicle-fields label { flex-basis: 100%; } .vehicle-bar { padding: 12px 14px; } }
+
+/* ======================================================================
+   Fitment on the product page
+   ====================================================================== */
+.fitment-panel { margin: 12px 0 4px; padding: 14px 16px; border: 1px solid var(--card-line); border-radius: 12px; background: #fff; display: grid; gap: 8px; }
+.fitment-panel > b { color: var(--ink); }
+.fitment-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.fitment-panel li { display: inline-flex; align-items: baseline; gap: 8px; padding: 5px 12px; border-radius: 999px; background: #eef4f8; color: var(--ink); font-weight: 650; font-size: .9375rem; }
+.fitment-panel li span { color: var(--muted); font-weight: 500; font-size: .8125rem; }
+.fitment-panel small { color: var(--muted); }
+.fitment-panel .fit-yes, .fitment-panel .fit-no { display: flex; align-items: center; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 10px; font-weight: 700; }
+.fit-yes { background: #e4f4ea; color: #1b5e37; }
+.fit-no { background: #fff0cc; color: #6f4f0a; }
+.fitment-none { margin: 12px 0 4px; color: var(--muted); font-size: .9375rem; }
+
+/* ======================================================================
+   Back-in-stock follow button
+   ====================================================================== */
+.stock-alert { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 10px; padding: 8px 14px; border: 1px dashed #9fb3c1; border-radius: 10px; background: #fff; color: var(--ink); font-weight: 650; transition: background .15s, border-color .15s; }
+.stock-alert:hover:not(:disabled) { background: var(--surface-soft); border-color: var(--ink-soft); }
+.stock-alert.on { border-style: solid; border-color: var(--success); background: #eef7f1; color: #1f5230; }
+.stock-alert.compact { margin-top: 8px; min-height: 40px; font-size: .875rem; }
+
+/* ======================================================================
+   Staff workspace: sidebar that fits without scrolling, sectioned settings
+   ====================================================================== */
+@media (min-width: 1024px) {
+  /* Every menu item should be visible on a normal laptop screen: scrollbars are hidden, so hidden items would be easy to miss */
+  .workspace-sidebar { padding: 18px 14px 12px; }
+  .workspace-brand { margin-bottom: 4px; }
+  .workspace-role { margin: 4px 0 8px; padding-bottom: 8px; font-size: .875rem; }
+  .workspace-sidebar nav { gap: 1px; }
+  .workspace-sidebar nav a { min-height: 38px; padding: 7px 12px; font-size: .9375rem; }
+  .nav-group-label { margin: 12px 0 4px; font-size: .75rem; }
+  .workspace-sidebar-bottom { display: grid; gap: 2px; padding-top: 8px; }
+  .workspace-sidebar-bottom > a, .workspace-sidebar-bottom > button { min-height: 36px; font-size: .9375rem; }
+  .workspace-sidebar-bottom > div { margin-top: 6px; padding-top: 8px; }
+}
+@media (min-width: 1024px) and (max-height: 760px) {
+  .workspace-sidebar nav a { min-height: 34px; padding-block: 5px; }
+  .nav-group-label { margin: 8px 0 2px; }
+  .workspace-role { display: none; }
+}
+
+.settings-sections { display: grid; gap: 4px; max-width: 880px; }
+.settings-section { border: 0; border-bottom: 1px solid #e6edf2; margin: 0; padding: 20px 0; min-width: 0; }
+.settings-section:first-of-type { padding-top: 4px; }
+.settings-section legend { padding: 0; margin-bottom: 14px; font-weight: 750; font-size: 1.0625rem; color: var(--ink); float: left; width: 100%; }
+.settings-section legend + * { clear: both; }
+.settings-section legend span { display: block; font-weight: 400; font-size: .9375rem; color: var(--muted); margin-top: 2px; }
+.settings-section.checkout-switch { border-bottom: 0; }
+.settings-section.checkout-switch .checkbox { padding: 14px 16px; border: 1px solid var(--card-line); border-radius: 12px; background: var(--surface-soft); font-weight: 650; }
+
+/* Management tables: a calmer header and clearer row focus */
+.table-panel table thead th { background: #f1f5f8; color: var(--ink-soft); font-size: .8125rem; text-transform: uppercase; letter-spacing: .5px; }
+.table-panel table tbody tr { transition: background .12s; }
+.table-panel .table-product b { color: var(--ink); }
+.table-panel td small { color: var(--muted); }
+.toolbar { gap: 10px; align-items: center; flex-wrap: wrap; }
+.toolbar .inline-search { flex: 1 1 260px; min-width: 0; }
+
+/* Mouse and trackpad users get a denser sidebar so all 12 admin items fit at 900px high; touch screens keep larger targets */
+@media (min-width: 1024px) and (pointer: fine) {
+  .workspace-sidebar { padding-top: 14px; }
+  .workspace-brand { margin-bottom: 0; }
+  .workspace-brand .brand-mark { width: 34px; height: 36px; font-size: 22px; }
+  .workspace-role { margin: 0 0 4px; padding-bottom: 6px; }
+  .workspace-sidebar nav a { min-height: 33px; padding-block: 4px; }
+  .nav-group-label { margin: 9px 0 3px; }
+  .workspace-sidebar-bottom > a, .workspace-sidebar-bottom > button { min-height: 32px; padding-block: 3px; }
+  .workspace-sidebar-bottom > div { margin-top: 2px; padding-top: 6px; }
+  .workspace-sidebar-bottom > div small { display: none; }
+}
+
+/* Scroll shadows: a soft glow on the sidebar menu's top/bottom edge appears only while more items are hidden in that direction */
+@media (min-width: 1024px) {
+  .workspace-sidebar nav {
+    background:
+      linear-gradient(#152838 30%, #15283800) center top,
+      linear-gradient(#15283800, #152838 70%) center bottom,
+      radial-gradient(farthest-side at 50% 0, #ffffff40, #ffffff00) center top,
+      radial-gradient(farthest-side at 50% 100%, #ffffff40, #ffffff00) center bottom;
+    background-repeat: no-repeat;
+    background-size: 100% 40px, 100% 40px, 100% 14px, 100% 14px;
+    background-attachment: local, local, scroll, scroll;
+  }
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  .workspace-sidebar nav a { min-height: 31px; padding-block: 3px; }
+  .nav-group-label { margin: 7px 0 2px; }
+}
+
+/* A solid colour (not a gradient) so the scroll-shadow covers above match the sidebar exactly */
+.workspace-sidebar { background: #152838; }
+
+.review-more { display: flex; margin: 14px auto 0; }

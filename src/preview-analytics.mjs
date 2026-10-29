@@ -24,3 +24,10 @@ export function previewAnalytics(state,days,now=Date.now()){
   wishlist_categories:counts(state.wishlist,w=>state.products.find(p=>p.id===w.product_id)?.category||'Other').map(x=>({category:x.name,count:x.count})).sort((a,b)=>b.count-a.count)
  };
 }
+
+// Match dashboard_previous_period SQL: the equal-length window that ends where the selected one begins.
+export function previewPreviousPeriod(state,days,now=Date.now()){
+ const until=now-days*86400000,since=until-days*86400000,within=t=>{const time=new Date(t).getTime();return time>=since&&time<until;};
+ const paid=state.orders.filter(o=>within(o.created_at)&&o.payment_status==='verified');
+ return {paid_sales_cents:paid.reduce((sum,o)=>sum+o.total_cents,0),paid_orders:paid.length,active_customers:new Set(state.activity.filter(e=>within(e.created_at)).map(e=>e.user_id)).size};
+}

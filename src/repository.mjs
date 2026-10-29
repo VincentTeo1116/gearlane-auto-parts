@@ -6,19 +6,24 @@ export const configured=Boolean(url&&key);
 export const companyName=import.meta.env.VITE_COMPANY_NAME||'GearLane Auto Parts';
 /* Signed-out visitors may read review text only; identifiers are hidden by the database (supabase/010-privacy-hardening.sql). */
 const REVIEW_PUBLIC_COLUMNS='id,product_id,rating,body,display_name,reply,published,created_at';
+/* Optional features: if their migration has not been run yet the table does not exist, and the store must still load. */
+const optional=async promise=>{const response=await promise;if(response.error&&['42P01','PGRST205','PGRST200'].includes(response.error.code))return{data:[],error:null};return response;};
 const result=async promise=>{const {data,error}=await promise;if(error)throw error;return data;};
 function createLiveRepository(){
  const supabase=createClient(url,key,{auth:{storage:window.sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},global:{fetch:(input,options={})=>fetch(input,{...options,signal:options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(20000)]):AbortSignal.timeout(20000)})}});
  let onChange=()=>{};
  const coreCache=new Map();
  const invalidate=()=>coreCache.clear();
- const reads=new Set(['record_event','dashboard_stats','staff_directory','manage_conversation','read_notifications','start_conversation','send_message','send_chat_message','toggle_wishlist','chat_inbox','start_support_enquiry','check_promotion','admin_get_settings']);
- const rpc=async(name,args={})=>{if(!reads.has(name))invalidate();try{return await result(supabase.rpc(name,args));}finally{if(!reads.has(name))invalidate();}};
+ const reads=new Set(['record_event','dashboard_stats','staff_directory','manage_conversation','read_notifications','start_conversation','send_message','send_chat_message','toggle_wishlist','chat_inbox','start_support_enquiry','check_promotion','admin_get_settings','dashboard_previous_period','toggle_stock_alert']);
+/* Milestones that email the customer. The server (api/order-email.js) re-checks the real order state, so this only asks. */
+ const ORDER_EMAILS={create_order:(args,value)=>[value,'placed'],verify_payment:args=>[args.p_order_id,args.p_approved?'payment_verified':'payment_rejected'],set_order_status:args=>['shipped','delivered'].includes(args.p_status)?[args.p_order_id,args.p_status]:null,cancel_order:args=>[args.p_order_id,'cancelled']};
+ const notifyOrder=async(orderId,event)=>{try{const {data}=await supabase.auth.getSession(),token=data.session?.access_token;if(!token||typeof orderId!=='string')return;await fetch('/api/order-email',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({order_id:orderId,event})});}catch{/* best effort: an email problem must never affect the order */}};
+ const rpc=async(name,args={})=>{if(!reads.has(name))invalidate();try{const value=await result(supabase.rpc(name,args));const email=ORDER_EMAILS[name]?.(args,value);if(email)notifyOrder(...email);return value;}finally{if(!reads.has(name))invalidate();}};
  const banners=async(optional=false)=>{const response=await supabase.from('promotion_banners').select('*').order('position').order('created_at',{ascending:false}).limit(100);if(response.error){if(optional)return [];throw response.error;}return response.data;};
  const core=profile=>{
   const cacheKey=(profile?.id||'guest')+':'+(profile?.role||'guest');
   const cached=coreCache.get(cacheKey);if(cached&&cached.until>Date.now())return cached.promise;
-  const queries={products:supabase.from('products').select('*').order('name'),settings:profile?.role==='admin'?supabase.rpc('admin_get_settings'):supabase.from('public_store_settings').select('*').eq('id',1).single(),announcements:supabase.from('announcements').select('*').order('created_at',{ascending:false}),promotions:profile?.role==='admin'?supabase.from('promotions').select('*'):Promise.resolve({data:[],error:null}),reviews:supabase.from('reviews').select(profile?'*':REVIEW_PUBLIC_COLUMNS).order('created_at',{ascending:false}).limit(500)};
+  const queries={products:supabase.from('products').select('*').order('name'),settings:profile?.role==='admin'?supabase.rpc('admin_get_settings'):supabase.from('public_store_settings').select('*').eq('id',1).single(),announcements:supabase.from('announcements').select('*').order('created_at',{ascending:false}),promotions:profile?.role==='admin'?supabase.from('promotions').select('*'):Promise.resolve({data:[],error:null}),fitment:optional(supabase.from('product_fitment').select('product_id,make,model,year_from,year_to').limit(5000)),reviews:supabase.from('reviews').select(profile?'*':REVIEW_PUBLIC_COLUMNS).order('created_at',{ascending:false}).limit(500)};
   const promise=Promise.all([...Object.entries(queries).map(async([name,query])=>[name,await result(query)]),banners(true).then(rows=>['banners',rows])]).then(Object.fromEntries).catch(error=>{if(coreCache.get(cacheKey)?.promise===promise)coreCache.delete(cacheKey);throw error;});
   coreCache.set(cacheKey,{promise,until:Date.now()+15000});return promise;
  };
@@ -39,7 +44,7 @@ function createLiveRepository(){
     if(want.has('refunds'))queries.refunds=supabase.from('refunds').select('*').order('created_at',{ascending:false}).limit(200);
     if(want.has('conversations'))queries.conversations=supabase.from('conversations').select('*,members:conversation_members(*)').order('created_at',{ascending:false}).limit(100);
     if(want.has('notifications'))queries.notifications=supabase.from('notifications').select('*').order('created_at',{ascending:false}).limit(100);
-    if(profile.role==='customer'&&want.has('wishlist'))queries.wishlist=supabase.from('wishlist').select('*');
+    if(profile.role==='customer'&&want.has('wishlist')){queries.wishlist=supabase.from('wishlist').select('*');queries.stock_alerts=optional(supabase.from('stock_alerts').select('*'));}
     if(['worker','admin'].includes(profile.role)){
      if(want.has('restock'))queries.restock=supabase.from('restock_requests').select('*').order('created_at',{ascending:false});
      if(want.has('directory'))queries.directory=supabase.rpc('staff_directory');
@@ -60,6 +65,8 @@ function createLiveRepository(){
   order(id){return result(supabase.from('orders').select('*,items:order_items(*),events:order_events(*)').eq('id',id).maybeSingle());},
   messages(id,before){let q=supabase.from('messages').select('*').eq('conversation_id',id).order('created_at',{ascending:false}).limit(100);if(before)q=q.lt('created_at',before);return result(q);},
   stats(days){return rpc('dashboard_stats',{p_days:days});},
+  /* Needs supabase/011-analytics-previous-period.sql; without it the dashboard simply shows no comparison. */
+  async previousStats(days){try{return await rpc('dashboard_previous_period',{p_days:days});}catch(error){if(['PGRST202','42883'].includes(error.code))return null;throw error;}},
   subscribe(callback){onChange=callback;const channel=supabase.channel('app-'+crypto.randomUUID());for(const table of ['orders','order_events','products','messages','conversations','notifications','refunds','restock_requests','reviews','promotion_banners'])channel.on('postgres_changes',{event:'*',schema:'public',table},()=>{if(['products','reviews','promotion_banners'].includes(table))invalidate();onChange(table);});channel.subscribe();return()=>supabase.removeChannel(channel);},
   async upload(file,bucket,orderId){
    if(!file||file.size>5*1024*1024)throw new Error('Choose a file smaller than 5 MB.');

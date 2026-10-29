@@ -1,6 +1,7 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.jsx';
+import {installErrorReporting} from './error-reporting.mjs';
 import {ErrorBoundary} from './components.jsx';
 import '@fontsource-variable/manrope';
 import './styles.css';
@@ -14,4 +15,6 @@ import './seller-chat.css';
 import './design-refresh.css';
 import './design-flows.css';
 import './design-v3.css';
+import './design-v4.css';
+if(import.meta.env.PROD&&import.meta.env.VITE_DEMO_MODE!=='true')installErrorReporting();
 createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);

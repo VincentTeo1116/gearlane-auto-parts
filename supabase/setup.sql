@@ -788,3 +788,138 @@ revoke select on public.reviews from anon;
 grant select(id,product_id,rating,body,display_name,reply,published,created_at) on public.reviews to anon;
 
 commit;
+
+
+-- GearLane dashboard comparison. Review, then run once in the Supabase SQL Editor on an EXISTING project.
+-- (A new project gets it through setup.sql.) Safe to run more than once. No business data is changed.
+--
+-- Returns the same headline figures as dashboard_stats, for the period of equal length that ENDS where
+-- the selected period BEGINS (for example, days 31-60 ago when the dashboard shows the last 30 days).
+begin;
+create or replace function public.dashboard_previous_period(p_days integer default 30) returns jsonb language plpgsql stable security definer set search_path=public,pg_temp as $$
+declare since_time timestamptz;until_time timestamptz;
+begin
+ perform public.require_role(array['admin']);
+ if p_days not in(7,30,90) then raise exception 'Choose 7, 30 or 90 days.';end if;
+ until_time:=now()-make_interval(days=>p_days);since_time:=until_time-make_interval(days=>p_days);
+ return jsonb_build_object(
+  'paid_sales_cents',coalesce((select sum(total_cents) from public.orders where created_at>=since_time and created_at<until_time and payment_status='verified'),0),
+  'paid_orders',(select count(*) from public.orders where created_at>=since_time and created_at<until_time and payment_status='verified'),
+  'active_customers',(select count(distinct user_id) from public.activity_events where created_at>=since_time and created_at<until_time)
+ );
+end $$;
+revoke all on function public.dashboard_previous_period(integer) from public,anon;
+grant execute on function public.dashboard_previous_period(integer) to authenticated;
+commit;
+
+
+-- GearLane order emails. Review, then run once in the Supabase SQL Editor on an EXISTING project.
+-- (A new project gets it through setup.sql.) Safe to run more than once. No business data is changed.
+--
+-- Records which email has been sent for which order so a customer gets each message once, however many
+-- times the browser asks. Only the server (service-role key) can read or write it; browsers cannot.
+begin;
+create table if not exists public.order_emails(
+  order_id uuid not null references public.orders(id) on delete cascade,
+  event text not null check(event in ('placed','payment_verified','payment_rejected','shipped','delivered','cancelled')),
+  sent_at timestamptz not null default now(),
+  primary key(order_id,event)
+);
+alter table public.order_emails enable row level security;
+revoke all on public.order_emails from anon, authenticated;
+commit;
+
+
+-- GearLane "notify me when back in stock". Review, then run once in the Supabase SQL Editor on an EXISTING project.
+-- (A new project gets it through setup.sql.) Safe to run more than once. No business data is changed.
+--
+-- A customer follows an out-of-stock product. When its stock goes from 0 to above 0 (restock, edit or a
+-- cancelled order returning stock) every follower gets an in-app notification and the follow ends.
+begin;
+create table if not exists public.stock_alerts(
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  product_id text not null references public.products(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key(user_id,product_id)
+);
+alter table public.stock_alerts enable row level security;
+revoke all on public.stock_alerts from anon, authenticated;
+grant select on public.stock_alerts to authenticated;
+drop policy if exists stock_alerts_read on public.stock_alerts;
+create policy stock_alerts_read on public.stock_alerts for select to authenticated using(user_id=auth.uid() and public.app_role()='customer');
+
+create or replace function public.toggle_stock_alert(p_product_id text) returns boolean language plpgsql security definer set search_path=public,pg_temp as $$
+declare p public.products%rowtype;
+begin
+ perform public.require_role(array['customer']);
+ if exists(select 1 from public.stock_alerts where user_id=auth.uid() and product_id=p_product_id) then
+  delete from public.stock_alerts where user_id=auth.uid() and product_id=p_product_id;return false;
+ end if;
+ select * into p from public.products where id=p_product_id and active;
+ if not found then raise exception 'Product unavailable.';end if;
+ if p.stock>0 then raise exception 'This product is in stock now.';end if;
+ if(select count(*) from public.stock_alerts where user_id=auth.uid())>=50 then raise exception 'You can follow up to 50 products. Remove one first.';end if;
+ insert into public.stock_alerts(user_id,product_id) values(auth.uid(),p_product_id);
+ return true;
+end$$;
+revoke all on function public.toggle_stock_alert(text) from public,anon;
+grant execute on function public.toggle_stock_alert(text) to authenticated;
+
+create or replace function public.notify_back_in_stock() returns trigger language plpgsql security definer set search_path=public,pg_temp as $$
+begin
+ if old.stock=0 and new.stock>0 and new.active and new.price_confirmed then
+  perform public.notify_user(a.user_id,'Back in stock: '||left(new.name,80),'You asked to hear when this part is available again. Stock is limited.','/products/'||new.id) from public.stock_alerts a where a.product_id=new.id;
+  delete from public.stock_alerts where product_id=new.id;
+ end if;
+ return new;
+end$$;
+revoke all on function public.notify_back_in_stock() from public,anon,authenticated;
+drop trigger if exists products_back_in_stock on public.products;
+create trigger products_back_in_stock after update of stock on public.products for each row when(old.stock=0 and new.stock>0) execute function public.notify_back_in_stock();
+commit;
+
+
+-- GearLane vehicle fitment. Review, then run once in the Supabase SQL Editor on an EXISTING project.
+-- (A new project gets it through setup.sql.) Safe to run more than once. No business data is changed.
+--
+-- Admins record which vehicles a product is listed for. Customers pick their vehicle and see which parts the
+-- store has listed for it. Nothing is invented: a product with no rows simply has no fitment information, and the
+-- storefront says so instead of guessing. The listing is the store's information, not a manufacturer guarantee.
+begin;
+create table if not exists public.product_fitment(
+  id uuid primary key default gen_random_uuid(),
+  product_id text not null references public.products(id) on delete cascade,
+  make text not null check(char_length(trim(make)) between 2 and 40),
+  model text not null check(char_length(trim(model)) between 1 and 60),
+  year_from integer check(year_from between 1950 and 2100),
+  year_to integer check(year_to between 1950 and 2100),
+  check((year_from is null)=(year_to is null)),
+  check(year_from is null or year_from<=year_to)
+);
+create index if not exists product_fitment_vehicle on public.product_fitment(lower(make),lower(model));
+create index if not exists product_fitment_product on public.product_fitment(product_id);
+alter table public.product_fitment enable row level security;
+revoke all on public.product_fitment from anon, authenticated;
+grant select on public.product_fitment to anon, authenticated;
+drop policy if exists product_fitment_read on public.product_fitment;
+create policy product_fitment_read on public.product_fitment for select using(exists(select 1 from public.products p where p.id=product_id and (p.active or public.app_role() in ('worker','admin'))));
+
+-- Replaces the whole list for one product in a single step. p_rows: [{"make":"Proton","model":"X50","year_from":2020,"year_to":2024}, ...]
+create or replace function public.admin_set_fitment(p_product_id text,p_rows jsonb) returns integer language plpgsql security definer set search_path=public,pg_temp as $$
+declare r jsonb;n integer:=0;
+begin
+ perform public.require_role(array['admin']);
+ if not exists(select 1 from public.products where id=p_product_id) then raise exception 'Product not found.';end if;
+ if jsonb_typeof(p_rows)<>'array' or jsonb_array_length(p_rows)>60 then raise exception 'Provide up to 60 vehicles.';end if;
+ delete from public.product_fitment where product_id=p_product_id;
+ for r in select * from jsonb_array_elements(p_rows) loop
+  insert into public.product_fitment(product_id,make,model,year_from,year_to)
+  values(p_product_id,trim(r->>'make'),trim(r->>'model'),nullif(r->>'year_from','')::integer,nullif(r->>'year_to','')::integer);
+  n:=n+1;
+ end loop;
+ perform public.audit('fitment_saved',p_product_id,jsonb_build_object('vehicles',n));
+ return n;
+end$$;
+revoke all on function public.admin_set_fitment(text,jsonb) from public,anon;
+grant execute on function public.admin_set_fitment(text,jsonb) to authenticated;
+commit;

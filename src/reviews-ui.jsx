@@ -46,7 +46,7 @@ export function ReviewForm({order,item,onClose}){
 
 /* Product-page review summary: average, 5-to-1 histogram and filters, then the list */
 export function ReviewSection({reviews}){
-  const [filter,setFilter]=useState('all');
+  const [filter,setFilter]=useState('all'),[limit,setLimit]=useState(10);
   if(!reviews.length)return <Empty title="No reviews yet">Only buyers who have confirmed receipt can leave a review.</Empty>;
   const parsed=reviews.map(r=>({...r,...parseReview(r.body)}));
   const average=reviews.reduce((s,r)=>s+r.rating,0)/reviews.length;
@@ -59,11 +59,11 @@ export function ReviewSection({reviews}){
   return <div className="review-section">
     <div className="review-summary">
       <div className="review-score"><b>{average.toFixed(1)}</b><span>out of 5</span><Stars value={average} size={20}/><small>{reviews.length} verified review{reviews.length===1?'':'s'}</small></div>
-      <div className="review-bars" aria-label="Rating breakdown">{counts.map(([n,c])=><button type="button" key={n} onClick={()=>setFilter(String(n))} disabled={!c} aria-label={`${n} star: ${c} review${c===1?'':'s'}`}><span>{n}★</span><i><em style={{width:(c/reviews.length*100)+'%'}}/></i><span>{c}</span></button>)}</div>
+      <div className="review-bars" aria-label="Rating breakdown">{counts.map(([n,c])=><button type="button" key={n} onClick={()=>{setFilter(String(n));setLimit(10);}} disabled={!c} aria-label={`${n} star: ${c} review${c===1?'':'s'}`}><span>{n}★</span><i><em style={{width:(c/reviews.length*100)+'%'}}/></i><span>{c}</span></button>)}</div>
       {tagCounts.length?<div className="review-tags-summary"><b>What buyers mention</b><div>{tagCounts.map(([t,n])=><span key={t}>{t} <em>{n}</em></span>)}</div></div>:null}
     </div>
-    <div className="review-filters" role="group" aria-label="Filter reviews">{chips.map(([key,text])=><button type="button" key={key} aria-pressed={filter===key} className={filter===key?'selected':''} onClick={()=>setFilter(key)}>{text}</button>)}</div>
-    {shown.length?<div className="reviews-list">{shown.map(r=><ReviewCard key={r.id} review={r}/>)}</div>:<p className="muted">No reviews match this filter.</p>}
+    <div className="review-filters" role="group" aria-label="Filter reviews">{chips.map(([key,text])=><button type="button" key={key} aria-pressed={filter===key} className={filter===key?'selected':''} onClick={()=>{setFilter(key);setLimit(10);}}>{text}</button>)}</div>
+    {shown.length?<div className="reviews-list">{shown.slice(0,limit).map(r=><ReviewCard key={r.id} review={r}/>)}</div>:<p className="muted">No reviews match this filter.</p>}{shown.length>limit?<button type="button" className="button secondary review-more" onClick={()=>setLimit(n=>n+10)}>Show more reviews ({shown.length-limit} left)</button>:null}
     <small className="muted">{withText} of {reviews.length} {reviews.length===1?'review includes':'reviews include'} written feedback.</small>
   </div>;
 }
