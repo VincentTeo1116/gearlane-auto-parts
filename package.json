@@ -8,7 +8,7 @@
     "dev:demo": "vite --mode demo --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs tests/chat.test.mjs tests/loading-banners.test.mjs tests/sample-scenario.test.mjs tests/sample-database.test.mjs",
+    "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs tests/chat.test.mjs tests/loading-banners.test.mjs tests/sample-scenario.test.mjs tests/sample-database.test.mjs tests/chat-inbox.test.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "seed:sql": "node scripts/generate-seed.mjs",
     "test:responsive": "node scripts/responsive-check.mjs",
@@ -16,7 +16,8 @@
     "test:experience": "node scripts/customer-experience-check.mjs",
     "test:banners": "node scripts/banner-performance-check.mjs",
     "seed:examples": "node scripts/generate-sample-data.mjs",
-    "test:chat-ui": "node scripts/chat-layout-check.mjs"
+    "test:chat-ui": "node scripts/chat-layout-check.mjs",
+    "test:chat-inbox": "node scripts/chat-inbox-check.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",

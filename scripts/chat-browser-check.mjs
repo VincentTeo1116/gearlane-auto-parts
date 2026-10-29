@@ -14,7 +14,7 @@ try{
   const pageFor=async role=>{
     const page=await context.newPage();page.setDefaultTimeout(12000);page.setDefaultNavigationTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
     await page.goto(base+'/account');await page.getByLabel('Email address',{exact:true}).fill(role+'@gearlane.demo');await page.getByLabel('Password',{exact:true}).fill('Demo'+role[0].toUpperCase()+role.slice(1)+'123!');await page.locator('form').filter({has:page.getByLabel('Password',{exact:true})}).getByRole('button',{name:'Sign in',exact:true}).click();await page.waitForURL(role==='customer'?'**/shop':'**/workspace');
-    await page.goto(base+(role==='customer'?'/messages':'/workspace/messages'));await page.getByLabel('Message',{exact:true}).waitFor();return page;
+    await page.goto(base+(role==='customer'?'/messages':'/workspace/messages'));if(role==='customer')await page.getByRole('button',{name:/Open conversation:/}).first().click();await page.getByLabel('Message',{exact:true}).waitFor();return page;
   };
   const customer=await pageFor('customer'),worker=await pageFor('worker');
   await customer.evaluate(async()=>{const {repository}=await import('/src/repository.mjs');window.__realSend=repository.sendMessage.bind(repository);window.__realMessages=repository.messages.bind(repository);window.__sendCount=0;repository.sendMessage=async value=>{window.__sendCount++;await new Promise(resolve=>setTimeout(resolve,1000));return window.__realSend(value);};});
@@ -52,7 +52,7 @@ try{
   await customer.getByLabel('Message',{exact:true}).fill('');
 
   await customer.evaluate(()=>{const state=JSON.parse(localStorage.getItem('gearlane_preview_v1')),conversation=state.conversations.find(c=>c.kind==='support'&&!c.closed_at);for(let i=0;i<120;i++)state.messages.push({id:crypto.randomUUID(),conversation_id:conversation.id,sender_id:conversation.customer_id,sender_name:'Test buyer',body:'History item '+String(i).padStart(3,'0'),product_id:null,created_at:new Date(Date.now()-(140-i)*60000).toISOString()});localStorage.setItem('gearlane_preview_v1',JSON.stringify(state));});
-  await customer.reload();await customer.getByRole('button',{name:'Load older messages',exact:true}).click();await customer.getByText('History item 000',{exact:true}).waitFor({state:'attached'});
+  await customer.reload();await customer.getByRole('button',{name:/Open conversation:/}).first().click();await customer.getByRole('button',{name:'Load older messages',exact:true}).click();await customer.getByText('History item 000',{exact:true}).waitFor({state:'attached'});
   const loaded=await customer.locator('.message').count();assert.ok(loaded>100);
   await customer.locator('.message-list').evaluate(el=>{el.scrollTop=0;el.dispatchEvent(new Event('scroll'));});
   await worker.getByLabel('Message',{exact:true}).fill('A new message while you read older history.');await worker.getByRole('button',{name:'Send',exact:true}).click();

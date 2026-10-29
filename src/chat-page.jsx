@@ -4,6 +4,8 @@ import {useApp, useTask} from './context.jsx';
 import {Button, Empty, Field, Link, Modal, Notice, ProductArt} from './components.jsx';
 import {dateTime, friendlyError, messageSchema, validate} from './domain.mjs';
 import {CHAT_PRIVACY_NOTICE, createChatSync, mergeMessages} from './chat.mjs';
+import {ConversationInbox} from './conversation-inbox.jsx';
+import {conversationTitle,enquiryTitleSchema} from './chat-inbox.mjs';
 
 export function ChatPrivacy({compact=false}) {
   if(compact)return <details className="chat-privacy compact"><summary><ShieldCheck size={17}/>Never share passwords or card details</summary><p>{CHAT_PRIVACY_NOTICE}</p></details>;
@@ -35,12 +37,12 @@ export function SupportCompose({product, onClose,embedded=false,onOpened,onBusyC
   return embedded?<section className="seller-product-enquiry"><button className="text-button" disabled={task.busy} onClick={onClose}>Back to conversation</button>{content}</section>:<Modal title="Chat with the seller" onClose={()=>!task.busy&&onClose()}>{content}</Modal>;
 }
 
-export function MessagesPage({workspace=false,embedded=false,active:visible=true,conversationId,onBusyChange,optionsOpen=false,onCloseOptions}) {
+export function MessagesPage({workspace=false,embedded=false,active:visible=true,conversationId,onBusyChange,optionsOpen=false,onCloseOptions,inboxOpen=false,onInboxChange,onConversationInfo}) {
   const {data,profile,repository,go,route,revision,openSupport}=useApp();
   const task=useTask(),params=new URLSearchParams(route.split('?')[1]);
   const [conversations,setConversations]=useState(data.conversations||[]);
   const [selected,setSelected]=useState(conversationId||params.get('conversation')||data.conversations?.[0]?.id||'');
-  const [showConversations,setShowConversations]=useState(false);
+  const [showConversations,setShowConversations]=useState(false),[inboxLoading,setInboxLoading]=useState(true),[newEnquiry,setNewEnquiry]=useState(false),[topic,setTopic]=useState(''),enquiryReference=useRef(null);
   const [attachmentsOpen,setAttachmentsOpen]=useState(false),textareaRef=useRef(null);
   const [messages,setMessages]=useState([]),[drafts,setDrafts]=useState({});
   const [pending,setPending]=useState(null),[sending,setSending]=useState(false);
@@ -49,6 +51,7 @@ export function MessagesPage({workspace=false,embedded=false,active:visible=true
   const [newInternal,setNewInternal]=useState(false),[recipient,setRecipient]=useState('');
   const mounted=useRef(true),active=useRef(selected),syncRef=useRef(null),listRef=useRef(null),draftRef=useRef({}),pendingRef=useRef(null),sendLock=useRef(false),stickToBottom=useRef(true),seen=useRef(new Map()),confirmed=useRef(new Set());
   const visibleRef=useRef(visible);visibleRef.current=visible;
+  const inboxRef=useRef(inboxOpen);inboxRef.current=inboxOpen;
   active.current=selected;
   const conversation=conversations.find(c=>c.id===selected);
   const draft=drafts[selected]||{body:'',productId:'',clientId:null};
@@ -59,11 +62,13 @@ export function MessagesPage({workspace=false,embedded=false,active:visible=true
     if(draftRef.current[id]?.clientId===clientId)writeDraft(id,{body:'',productId:'',clientId:null});
     if(pendingRef.current?.clientId===clientId)updatePending(null);
   };
-  useEffect(()=>{onBusyChange?.(sending||Boolean(pending));return()=>onBusyChange?.(false);},[sending,Boolean(pending),onBusyChange]);
+  useEffect(()=>{onBusyChange?.(sending||Boolean(pending)||(newEnquiry&&task.busy));return()=>onBusyChange?.(false);},[sending,Boolean(pending),newEnquiry,task.busy,onBusyChange]);
   useEffect(()=>{if(conversationId&&conversationId!==active.current)setSelected(conversationId);},[conversationId]);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   useEffect(()=>{const id=new URLSearchParams(route.split('?')[1]).get('conversation');if(id&&id!==active.current)setSelected(id);},[route]);
-  useEffect(()=>{if(!selected&&conversations.length)setSelected(conversations[0].id);},[selected,conversations]);
+  useEffect(()=>{if(!embedded&&!selected&&conversations.length)setSelected(conversations[0].id);},[selected,conversations,embedded]);
+  const selectedTitle=conversation?conversationTitle(conversation):'',unreadTotal=conversations.reduce((n,c)=>n+Number(c.unread_count||0),0);
+  useEffect(()=>{onConversationInfo?.({title:selectedTitle,unread:unreadTotal});},[selectedTitle,unreadTotal,onConversationInfo]);
   const loadedConversations=useRef(new Set());
   const shouldSync=visible||Boolean(pending);
   useEffect(()=>{setMessages([]);setLoading(Boolean(selected));setOlder(false);setNewMessages(false);setSyncError('');stickToBottom.current=true;loadedConversations.current.delete(selected);},[selected,repository,profile.id]);
@@ -72,27 +77,29 @@ export function MessagesPage({workspace=false,embedded=false,active:visible=true
     let first=!loadedConversations.current.has(selected);
     const controller=createChatSync(async()=>{
       setSyncing(true);
-      const [list,rows]=await Promise.all([repository.conversations(),selected?repository.messages(selected):Promise.resolve([])]);
+      const [list,rows]=await Promise.all([repository.conversations(),selected&&(!inboxOpen||pendingRef.current)?repository.messages(selected):Promise.resolve(null)]);
       return {list,rows};
     },{
       onSuccess:({list,rows})=>{
-        setConversations(list);setMessages(previous=>mergeMessages(previous,rows));setSyncError('');setLoading(false);setSyncing(false);setLastSync(new Date());
+        setConversations(list);setInboxLoading(false);setSyncError('');setSyncing(false);setLastSync(new Date());
+        if(!rows)return;
+        setMessages(previous=>mergeMessages(previous,rows));setLoading(false);
         if(first){setOlder(rows.length===100);loadedConversations.current.add(selected);first=false;}
         rows.forEach(row=>{if(row.client_message_id)confirmed.current.add(row.client_message_id);});
         const savedDraft=draftRef.current[selected];
         if(savedDraft?.clientId&&rows.some(row=>row.client_message_id===savedDraft.clientId)&&!sendLock.current)clearDelivered(selected,savedDraft.clientId);
         const newest=rows[0]?.id;
-        if(newest&&visibleRef.current&&document.visibilityState==='visible'&&stickToBottom.current&&seen.current.get(selected)!==newest){
-          repository.rpc('manage_conversation',{p_conversation_id:selected,p_action:'read'}).then(()=>seen.current.set(selected,newest)).catch(()=>{});
+        if(newest&&visibleRef.current&&!inboxRef.current&&document.visibilityState==='visible'&&stickToBottom.current&&seen.current.get(selected)!==newest){
+          repository.rpc('manage_conversation',{p_conversation_id:selected,p_action:'read'}).then(()=>{seen.current.set(selected,newest);setConversations(list=>list.map(c=>c.id===selected?{...c,unread_count:0}:c));}).catch(()=>{});
         }
       },
-      onError:error=>{setSyncError(friendlyError(error));setLoading(false);setSyncing(false);}
+      onError:error=>{setSyncError(friendlyError(error));setInboxLoading(false);setLoading(false);setSyncing(false);}
     });
     syncRef.current=controller;void controller.sync();
     const wake=()=>{setOnline(navigator.onLine);if(navigator.onLine&&document.visibilityState==='visible')void controller.sync();};
     window.addEventListener('online',wake);window.addEventListener('offline',wake);window.addEventListener('focus',wake);document.addEventListener('visibilitychange',wake);
     return()=>{controller.stop();if(syncRef.current===controller)syncRef.current=null;window.removeEventListener('online',wake);window.removeEventListener('offline',wake);window.removeEventListener('focus',wake);document.removeEventListener('visibilitychange',wake);};
-  },[selected,repository,profile.id,shouldSync]);
+  },[selected,repository,profile.id,shouldSync,inboxOpen]);
   useEffect(()=>{if(visible&&stickToBottom.current)requestAnimationFrame(()=>{if(listRef.current)listRef.current.scrollTop=listRef.current.scrollHeight;});},[visible]);
   useEffect(()=>{void syncRef.current?.sync();},[revision]);
   useEffect(()=>{
@@ -140,15 +147,17 @@ export function MessagesPage({workspace=false,embedded=false,active:visible=true
     catch(error){if(mounted.current)task.setError(friendlyError(error));}
     finally{if(mounted.current)setLoadingOlder(false);}
   };
-  const nameOf=c=>c.kind==='support'?(workspace?'Customer '+c.customer_id.slice(0,8):'GearLane support'):(c.members||[]).filter(m=>m.user_id!==profile.id).map(m=>data.directory?.find(u=>u.id===m.user_id)?.full_name||'Team member').join(', ')||'Staff conversation';
+  const nameOf=c=>c.kind==='support'?(workspace?(c.customer_name||'Customer '+c.customer_id.slice(-6))+' - '+(c.title||'Customer support'):'GearLane support'):(c.members||[]).filter(m=>m.user_id!==profile.id).map(m=>data.directory?.find(u=>u.id===m.user_id)?.full_name||'Team member').join(', ')||'Staff conversation';
   const meaningful=draft.body.replace(/[\s\u200B-\u200D\uFEFF]/gu,'').length>0;
   const pendingHere=pending?.conversationId===selected?pending:null;
   const pendingVisible=pendingHere&&!messages.some(m=>m.client_message_id===pendingHere.clientId);
-  const startSupport=async()=>{const result=await task.perform(()=>repository.rpc('start_conversation',{p_kind:'support',p_recipient_id:null}));if(result.ok){setSelected(result.value);setShowConversations(false);onCloseOptions?.();void syncRef.current?.sync();}};
+  const startSupport=()=>{task.setError('');setNewEnquiry(true);onInboxChange?.(true);onCloseOptions?.();};
+  const createEnquiry=async event=>{event.preventDefault();const checked=enquiryTitleSchema.safeParse(topic);if(!checked.success){task.setError(checked.error.issues[0].message);return;}if(enquiryReference.current?.title!==checked.data)enquiryReference.current={title:checked.data,requestId:crypto.randomUUID()};const result=await task.perform(()=>repository.startSupportEnquiry(enquiryReference.current));if(result.ok){setSelected(result.value);setNewEnquiry(false);setTopic('');enquiryReference.current=null;setShowConversations(false);onInboxChange?.(false);void syncRef.current?.sync();}};
   return <section className={embedded?'conversation-page embedded-conversation':workspace?'conversation-page':'container section conversation-page'}>
-    {!embedded?<div className="section-heading"><div><span className="eyebrow">{workspace?'CUSTOMERS & YOUR TEAM':'TALK TO THE STORE'}</span><h1>{workspace?'Messages':'Your support messages'}</h1><p>Continue the conversation here. New messages sync automatically every five seconds.</p></div><Button variant="secondary" disabled={sending||Boolean(pending)} onClick={()=>workspace?setNewInternal(true):openSupport(null)}>{workspace?'New staff chat':'New support enquiry'}<Plus size={18}/></Button></div>:optionsOpen?<div id="seller-chat-options" className="embedded-chat-tools" role="region" aria-label="Chat options"><button className="text-button" aria-expanded={showConversations} onClick={()=>{setShowConversations(v=>!v);onCloseOptions?.();}}>Conversations ({conversations.length})</button><Button variant="secondary small" busy={task.busy} disabled={sending||Boolean(pending)} onClick={startSupport}>New enquiry<Plus size={16}/></Button><ChatPrivacy compact/><p className="chat-reply-note">Messages are answered by our store team when available.</p></div>:null}
+    {!embedded?<div className="section-heading"><div><span className="eyebrow">{workspace?'CUSTOMERS & YOUR TEAM':'TALK TO THE STORE'}</span><h1>{workspace?'Messages':'Your support messages'}</h1><p>Continue the conversation here. New messages sync automatically every five seconds.</p></div><Button variant="secondary" disabled={sending||Boolean(pending)} onClick={()=>workspace?setNewInternal(true):openSupport(null)}>{workspace?'New staff chat':'New support enquiry'}<Plus size={18}/></Button></div>:optionsOpen?<div id="seller-chat-options" className="embedded-chat-tools" role="region" aria-label="Chat options"><Button variant="secondary small" busy={task.busy} disabled={sending||Boolean(pending)} onClick={startSupport}>New enquiry<Plus size={16}/></Button><ChatPrivacy compact/><p className="chat-reply-note">Messages are answered by our store team when available.</p></div>:null}
     {!conversation&&syncError?<Notice type="error">{syncError} Automatic sync will try again.<Button variant="secondary small" onClick={()=>void syncRef.current?.sync()}>Try sync again</Button></Notice>:null}
-    <div className={'chat-layout '+(embedded&&showConversations?'show-conversations':'')}><aside className="conversation-list" aria-label="Conversations"><div className="conversation-list-heading"><b>Conversations</b><span>{conversations.length}</span>{embedded?<button className="text-button" onClick={()=>setShowConversations(false)}>Back to chat</button>:null}</div>{conversations.length?conversations.map(c=><button key={c.id} aria-pressed={selected===c.id} disabled={Boolean(pending)&&selected!==c.id} className={selected===c.id?'selected':''} onClick={()=>{setSelected(c.id);setShowConversations(false);task.setError('');}}><span>{c.kind==='internal'?'Team chat':'Customer support'}</span><b>{nameOf(c)}</b><small>{c.closed_at?'Closed':c.assigned_to===profile.id?'Assigned to you':c.kind==='support'?'Open conversation':'Private to members'}</small></button>):<p>No conversations yet. Start a chat to get help.</p>}{pending?<p className="conversation-lock-note">Finish sending or keep the pending message as a draft before switching conversations.</p>:null}</aside>
+    {embedded&&inboxOpen?<>{newEnquiry?<form className="new-enquiry-form" onSubmit={createEnquiry}><button className="text-button" type="button" disabled={task.busy} onClick={()=>{setNewEnquiry(false);task.setError('');}}>Back to chats</button><span className="eyebrow">A SEPARATE CONVERSATION</span><h3>What can we help with?</h3><p>Add a short topic so you can find this enquiry again.</p><Field label="Enquiry topic" hint="For example: Brake pad fitment for Proton Saga"><input autoFocus required minLength={3} maxLength={120} disabled={task.busy} value={topic} onChange={e=>{setTopic(e.target.value);task.setError('');}}/></Field>{task.error?<Notice type="error">{task.error}</Notice>:null}<Button busy={task.busy}>{task.busy?'Starting enquiry...':'Start enquiry'}<ArrowRight size={17}/></Button></form>:<ConversationInbox rows={conversations} profileId={profile.id} selected={selected} pending={Boolean(pending)} loading={inboxLoading} onNew={startSupport} onSelect={id=>{setSelected(id);setAttachmentsOpen(false);task.setError('');onInboxChange?.(false);}}/>}</>:null}
+    <div hidden={embedded&&inboxOpen} className={'chat-layout '+(embedded&&showConversations?'show-conversations':'')}><aside className="conversation-list" aria-label="Conversations"><div className="conversation-list-heading"><b>Conversations</b><span>{conversations.length}</span>{embedded?<button className="text-button" onClick={()=>setShowConversations(false)}>Back to chat</button>:null}</div>{conversations.length?conversations.map(c=><button key={c.id} aria-pressed={selected===c.id} disabled={Boolean(pending)&&selected!==c.id} className={selected===c.id?'selected':''} onClick={()=>{setSelected(c.id);setShowConversations(false);task.setError('');}}><span>{c.kind==='internal'?'Team chat':'Customer support'}</span><b>{nameOf(c)}</b>{workspace&&c.last_message?<span className="staff-conversation-preview">{c.last_message.body}</span>:null}<small>{c.closed_at?'Closed':c.assigned_to===profile.id?'Assigned to you':c.kind==='support'?'Open conversation':'Private to members'}</small></button>):<p>No conversations yet. Start a chat to get help.</p>}{pending?<p className="conversation-lock-note">Finish sending or keep the pending message as a draft before switching conversations.</p>:null}</aside>
       <section className="chat-thread" aria-label="Selected conversation">
         {conversation?<>
           <header className="thread-header"><div><b>{nameOf(conversation)}</b><small>{conversation.closed_at?'This conversation is closed.':conversation.kind==='internal'?'Private staff conversation':'Human support · replies depend on staff availability'}</small></div>{workspace&&!conversation.closed_at&&conversation.kind==='support'?<div className="actions"><Button variant="secondary small" disabled={sending||Boolean(pending)} busy={task.busy} onClick={()=>task.perform(()=>repository.rpc('manage_conversation',{p_conversation_id:selected,p_action:'assign'}),'Conversation assigned to you.')}>Assign to me</Button><Button variant="secondary small" disabled={sending||Boolean(pending)} busy={task.busy} onClick={()=>task.perform(()=>repository.rpc('manage_conversation',{p_conversation_id:selected,p_action:'close'}),'Conversation closed.')}>Close</Button></div>:null}</header>
@@ -167,7 +176,7 @@ export function MessagesPage({workspace=false,embedded=false,active:visible=true
             {conversation.kind==='support'&&(!embedded||attachmentsOpen||draft.productId)?<select aria-label="Attach a product to the message" value={draft.productId} disabled={sending||Boolean(pending)} onChange={e=>editDraft({productId:e.target.value})}><option value="">No product attachment</option>{data.products.filter(p=>p.active).map(p=><option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}</select>:null}
             <textarea ref={textareaRef} rows={embedded?1:undefined} aria-label="Message" aria-describedby="chat-composer-help" required maxLength={2000} readOnly={sending||Boolean(pending)} value={draft.body} placeholder="Write a message…" onChange={e=>editDraft({body:e.target.value})} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&e.keyCode!==229){e.preventDefault();e.currentTarget.form.requestSubmit();}}}/>
             <div className="composer-footer"><small id="chat-composer-help"><span className="composer-keyboard-hint">Enter to send · Shift+Enter for a new line</span><span>{draft.body.length}/2,000</span></small><Button type="submit" aria-label={sending?'Sending…':'Send'} busy={sending} disabled={!online||!meaningful||sending||Boolean(pending)||loading||task.busy}><span className="composer-send-label">{sending?'Sending…':'Send'}</span><Send size={17}/></Button></div>
-          </form>:<Notice>This conversation is closed. Start another support enquiry if you need more help.</Notice>}
+          </form>:<Notice><span>This conversation is closed. Start another support enquiry if you need more help.</span>{embedded?<Button variant="secondary small" onClick={startSupport}>Start new enquiry</Button>:null}</Notice>}
         </>:<Empty title={embedded?'How can we help?':'Choose a conversation'} action={embedded?<Button busy={task.busy} onClick={startSupport}>Start conversation</Button>:null}>{embedded?'Ask about a part, specification or order. Our store team will reply here.':'Select a conversation or start a new chat.'}</Empty>}
         {task.error?<Notice type="error">{task.error}</Notice>:null}
       </section>

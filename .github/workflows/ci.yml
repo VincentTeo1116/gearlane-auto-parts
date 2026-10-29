@@ -42,6 +42,8 @@ jobs:
         run: npm run test:chat
       - name: Verify responsive seller-chat window
         run: npm run test:chat-ui
+      - name: Verify conversation history and enquiry creation
+        run: npm run test:chat-inbox
       - name: Verify customer discovery and feedback states
         run: npm run test:experience
       - name: Verify promotion banners and scoped loading

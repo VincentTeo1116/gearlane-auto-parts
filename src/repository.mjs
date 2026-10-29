@@ -10,7 +10,7 @@ function createLiveRepository(){
  let onChange=()=>{};
  const coreCache=new Map();
  const invalidate=()=>coreCache.clear();
- const reads=new Set(['record_event','dashboard_stats','staff_directory','manage_conversation','read_notifications','start_conversation','send_message','send_chat_message','toggle_wishlist']);
+ const reads=new Set(['record_event','dashboard_stats','staff_directory','manage_conversation','read_notifications','start_conversation','send_message','send_chat_message','toggle_wishlist','chat_inbox','start_support_enquiry']);
  const rpc=async(name,args={})=>{if(!reads.has(name))invalidate();try{return await result(supabase.rpc(name,args));}finally{if(!reads.has(name))invalidate();}};
  const banners=async(optional=false)=>{const response=await supabase.from('promotion_banners').select('*').order('position').order('created_at',{ascending:false}).limit(100);if(response.error){if(optional)return [];throw response.error;}return response.data;};
  const core=profile=>{
@@ -52,7 +52,8 @@ function createLiveRepository(){
   },
   banners(){return banners();},
   rpc,
-  conversations(){return result(supabase.from('conversations').select('*,members:conversation_members(*)').order('created_at',{ascending:false}).limit(100));},
+  async conversations(){const response=await supabase.rpc('chat_inbox');if(!response.error)return response.data||[];if(!['PGRST202','42883'].includes(response.error.code))throw response.error;return result(supabase.from('conversations').select('*,members:conversation_members(*)').order('created_at',{ascending:false}).limit(100));},
+  async startSupportEnquiry({title,requestId}){try{return await rpc('start_support_enquiry',{p_title:title,p_request_id:requestId});}catch(error){if(['PGRST202','42883'].includes(error.code))throw new Error('New enquiry topics need supabase/009-chat-inbox.sql. Ask the project owner to apply this update. Existing chats are still available.');throw error;}},
   sendMessage({conversationId,body,productId=null,clientId}){return rpc('send_chat_message',{p_conversation_id:conversationId,p_body:body,p_product_id:productId,p_client_message_id:clientId});},
   order(id){return result(supabase.from('orders').select('*,items:order_items(*),events:order_events(*)').eq('id',id).maybeSingle());},
   messages(id,before){let q=supabase.from('messages').select('*').eq('conversation_id',id).order('created_at',{ascending:false}).limit(100);if(before)q=q.lt('created_at',before);return result(q);},

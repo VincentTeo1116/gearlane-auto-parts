@@ -6,6 +6,10 @@
 .seller-chat-avatar { display:grid; place-items:center; width:43px; height:43px; border-radius:13px; background:#ffffff15; flex-shrink:0; }
 .seller-chat-header > div:not(.seller-chat-window-actions) { flex:1; min-width:0; }
 .seller-chat-header h2 { font-size:18px; letter-spacing:-.3px; margin:0; line-height:1.4; }
+.seller-chat-header h2 { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.seller-chats-link { display:inline-flex; align-items:center; justify-content:center; gap:4px; min-height:44px; padding:6px; color:#fff; border:0; border-radius:8px; background:#ffffff12; font:inherit; font-size:.9375rem; font-weight:650; flex-shrink:0; }
+.seller-chats-link:hover { background:#ffffff22; }
+.seller-chats-link small { background:#f2aa67; color:#183445; border-radius:12px; padding:0 5px; font-size:.75rem; }
 :root .seller-chat-header p { font-size:.8125rem; color:#c3d4df; margin:3px 0 0; line-height:1.5; overflow-wrap:anywhere; }
 .seller-chat-window-actions { display:flex; flex-shrink:0; gap:2px; }
 .seller-chat-window-actions .icon-button { color:#fff; min-width:36px; min-height:40px; }
@@ -25,6 +29,50 @@
 .seller-chat-window .embedded-chat-tools .chat-privacy { margin:0; }
 .seller-chat-window .chat-reply-note { font-size:.875rem; margin:0; color:var(--muted); }
 .seller-chat-window .embedded-conversation .chat-layout { display:flex; position:relative; flex:1; min-height:0; overflow:hidden; border:0; border-radius:0; }
+.seller-chat-window .embedded-conversation .chat-layout[hidden] { display:none; }
+.seller-inbox { display:flex; flex-direction:column; min-height:0; flex:1; background:#fff; }
+.inbox-intro { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 18px; background:linear-gradient(120deg,#f1f6f9,#fff); }
+.inbox-intro h3 { min-width:0; font-size:21px; line-height:1.3; letter-spacing:-.5px; margin:0; }
+.inbox-intro .button { flex-shrink:0; min-height:42px; padding:9px 11px; font-size:.875rem; }
+.inbox-search { display:flex; align-items:center; gap:9px; margin:0 17px 12px; padding:0 12px; border:1px solid #dce5eb; border-radius:10px; background:#f7f9fb; color:#6d8493; flex-shrink:0; }
+.inbox-search input { flex:1; min-width:0; border:0; background:none; padding:11px 0; font-size:1rem; }
+.inbox-filters { display:flex; gap:7px; padding:0 17px 13px; flex-shrink:0; }
+.inbox-filters button { min-height:36px; padding:6px 13px; border:1px solid #e1e8ed; border-radius:20px; background:#fff; color:#5b7485; font:inherit; font-size:.875rem; }
+.inbox-filters [aria-pressed=true] { color:#193e55; background:#e7f0f6; border-color:#bdd2e1; font-weight:700; }
+.inbox-records { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:0 10px 12px; }
+.inbox-conversation { width:100%; display:flex; align-items:flex-start; gap:11px; padding:15px 10px; border:0; border-top:1px solid #edf1f4; border-radius:0; background:#fff; color:var(--ink); font:inherit; text-align:left; }
+.inbox-conversation:hover,.inbox-conversation:focus-visible { background:#f2f7fb; border-radius:10px; }
+.inbox-conversation.current { background:#f6f9fb; }
+.inbox-avatar { display:grid; place-items:center; flex-shrink:0; width:41px; height:41px; border-radius:13px; background:#e9f0f5; color:#557b94; }
+.inbox-conversation.unread .inbox-avatar { background:#203e54; color:#fff; }
+.inbox-card-body { flex:1; min-width:0; }
+.inbox-card-top { display:flex; align-items:baseline; gap:9px; margin-bottom:6px; }
+.inbox-card-top b { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; font-size:1rem; line-height:1.5; }
+.inbox-card-top time { flex-shrink:0; color:#7c8e99; font-size:.75rem; }
+.inbox-preview { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; color:#6c7f8b; font-size:.9375rem; line-height:1.55; }
+.inbox-conversation.unread .inbox-preview { color:#304f64; }
+.inbox-card-bottom { display:flex; align-items:center; gap:9px; margin-top:10px; }
+.inbox-state { display:inline-flex; align-items:center; gap:5px; padding:2px 7px; font-size:.75rem; border-radius:12px; }
+.inbox-state.open { color:#3c6d55; background:#edf5ef; }
+.inbox-state.open i { width:5px; height:5px; border-radius:50%; background:#64947a; }
+.inbox-state.closed { background:#f0f2f5; color:#6d7e89; }
+.inbox-card-bottom small { font-size:.6875rem; color:#94a1aa; }
+.inbox-card-bottom > svg,.inbox-unread { margin-left:auto; }
+.inbox-unread { border-radius:12px; padding:2px 7px; background:#e6eef6; color:#2b6087; font-size:.75rem; font-weight:700; }
+.inbox-empty { text-align:center; padding:35px 19px; color:#708391; }
+.inbox-empty h4 { color:var(--ink); margin:13px 0 9px; }
+.inbox-empty p { margin-bottom:16px; }
+.inbox-pending-note { margin:0 17px 10px; padding:10px; background:#fff7e7; border-radius:8px; color:#876431; }
+.inbox-loading { display:grid; gap:12px; padding:9px; }
+.inbox-skeleton { min-height:94px; display:grid; grid-template-columns:41px 1fr; gap:12px; align-items:center; padding:12px 0; }
+.inbox-skeleton i { grid-row:span 2; width:41px; height:41px; }
+.inbox-limit { padding:8px 16px; color:var(--muted); }
+.staff-conversation-preview { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin:8px 0; font-size:.875rem; line-height:1.5; color:var(--muted); }
+.new-enquiry-form { padding:23px 20px; overflow-y:auto; flex:1; min-height:0; }
+.new-enquiry-form > .text-button { padding:0 0 24px; }
+.new-enquiry-form h3 { font-size:26px; }
+.new-enquiry-form > p { color:var(--muted); margin:12px 0 25px; }
+.new-enquiry-form > .button { width:100%; margin-top:7px; }
 .seller-chat-window .conversation-list { display:none; }
 .seller-chat-window .show-conversations .conversation-list { display:block; position:absolute; inset:0; z-index:5; max-height:none; width:100%; background:#fff; overflow-y:auto; padding:13px; }
 .seller-chat-window .chat-thread { flex:1; min-height:0; width:100%; overflow:hidden; }
@@ -68,6 +116,10 @@
  .seller-chat-window .chat-product-choice .product-art { width:70px; flex-shrink:0; }
 }
 @media(max-height:600px){
+ .inbox-intro { padding:13px 17px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+ .inbox-intro .eyebrow,.inbox-intro p { display:none; }
+ .inbox-intro h3 { font-size:21px; margin:0; }
+ .inbox-intro .button { font-size:.875rem; padding:7px 10px; }
  .seller-chat-window .thread-header { display:none; }
  .seller-chat-window .seller-chat-header { padding-top:8px; padding-bottom:8px; }
  .seller-chat-window .chat-privacy.compact { margin-top:5px; margin-bottom:4px; }
