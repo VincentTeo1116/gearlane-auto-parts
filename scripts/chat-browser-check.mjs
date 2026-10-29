@@ -20,9 +20,10 @@ try{
   await customer.evaluate(async()=>{const {repository}=await import('/src/repository.mjs');window.__realSend=repository.sendMessage.bind(repository);window.__realMessages=repository.messages.bind(repository);window.__sendCount=0;repository.sendMessage=async value=>{window.__sendCount++;await new Promise(resolve=>setTimeout(resolve,1000));return window.__realSend(value);};});
   assert.equal(await customer.getByRole('button',{name:'Send',exact:true}).isDisabled(),true);
   await customer.getByLabel('Message',{exact:true}).fill('   \n\t');assert.equal(await customer.getByRole('button',{name:'Send',exact:true}).isDisabled(),true);
+  await customer.getByRole('button',{name:'Chat options',exact:true}).click();
   await customer.locator('.chat-privacy summary').click();
   assert.match(await customer.locator('.chat-privacy').innerText(),/passwords.*OTP\/TAC.*card numbers.*CVV/);
-  await customer.locator('.chat-privacy summary').click();
+  await customer.getByRole('button',{name:'Chat options',exact:true}).click();
   await customer.getByLabel('Message',{exact:true}).fill('Customer message delivered by five-second polling.');
   await customer.getByRole('button',{name:'Send',exact:true}).click();
   assert.equal(await customer.getByRole('button',{name:'Sending…',exact:true}).isDisabled(),true);
