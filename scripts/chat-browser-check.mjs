@@ -20,7 +20,9 @@ try{
   await customer.evaluate(async()=>{const {repository}=await import('/src/repository.mjs');window.__realSend=repository.sendMessage.bind(repository);window.__realMessages=repository.messages.bind(repository);window.__sendCount=0;repository.sendMessage=async value=>{window.__sendCount++;await new Promise(resolve=>setTimeout(resolve,1000));return window.__realSend(value);};});
   assert.equal(await customer.getByRole('button',{name:'Send',exact:true}).isDisabled(),true);
   await customer.getByLabel('Message',{exact:true}).fill('   \n\t');assert.equal(await customer.getByRole('button',{name:'Send',exact:true}).isDisabled(),true);
+  await customer.locator('.chat-privacy summary').click();
   assert.match(await customer.locator('.chat-privacy').innerText(),/passwords.*OTP\/TAC.*card numbers.*CVV/);
+  await customer.locator('.chat-privacy summary').click();
   await customer.getByLabel('Message',{exact:true}).fill('Customer message delivered by five-second polling.');
   await customer.getByRole('button',{name:'Send',exact:true}).click();
   assert.equal(await customer.getByRole('button',{name:'Sending…',exact:true}).isDisabled(),true);
@@ -67,6 +69,6 @@ try{
 
   await worker.locator('.conversation-list button').filter({hasText:'Customer support'}).first().click();await worker.getByRole('button',{name:'Close',exact:true}).click();await customer.getByText('This conversation is closed. Start another support enquiry if you need more help.',{exact:true}).waitFor();assert.equal(await customer.getByLabel('Message',{exact:true}).count(),0);
   await customer.evaluate(async()=>{const {repository}=await import('/src/repository.mjs');window.__reads=0;const real=repository.messages.bind(repository);repository.messages=(...args)=>{window.__reads++;return real(...args);};});
-  await customer.getByRole('navigation',{name:'Store navigation'}).getByRole('link',{name:'Shop parts',exact:true}).click();await customer.waitForURL('**/shop');const before=await customer.evaluate(()=>window.__reads);await new Promise(resolve=>setTimeout(resolve,5500));assert.equal(await customer.evaluate(()=>window.__reads),before,'Polling stops after leaving chat');
+  await customer.getByRole('navigation',{name:'Store navigation'}).getByRole('link',{name:'Shop parts',exact:true}).click();await customer.waitForURL('**/shop');await customer.locator('.seller-chat-window').getByRole('button',{name:'Minimise chat',exact:true}).click();const before=await customer.evaluate(()=>window.__reads);await new Promise(resolve=>setTimeout(resolve,5500));assert.equal(await customer.evaluate(()=>window.__reads),before,'Polling pauses after minimising the chat');
   assert.deepEqual(errors,[]);console.log('Chat checks passed: five-second polling without push events, pending lock, retries, offline drafts, history/scroll, private staff chat, closed state, mobile layout and cleanup.');
 }finally{await browser?.close();await server.close();}

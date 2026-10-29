@@ -10,11 +10,11 @@ try{
   const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage();
   page.setDefaultTimeout(12000);page.setDefaultNavigationTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
   const base='http://127.0.0.1:5191';await mkdir('.generated/customer-ui',{recursive:true});
-  const visit=async route=>{await page.goto(base+route);await page.locator('.loading-screen').waitFor({state:'hidden'});await page.locator('.fatal').waitFor({state:'hidden'});};
+  const visit=async route=>{await page.goto(base+route);await page.locator('#page-main').waitFor();await page.locator('.loading-screen').waitFor({state:'hidden'});await page.locator('.fatal').waitFor({state:'hidden'});};
   await visit('/');await page.getByRole('heading',{name:/The right parts/}).waitFor();await page.screenshot({path:'.generated/customer-ui/home-desktop.png',fullPage:true,animations:'disabled'});
   await page.getByRole('button',{name:'See all 11 categories',exact:true}).click();assert.equal(await page.locator('.customer-category').count(),11);
   await page.getByRole('button',{name:'Show fewer categories',exact:true}).click();assert.equal(await page.locator('.customer-category').count(),6);
-  await page.getByRole('combobox',{name:'Search the catalogue',exact:true}).fill('wiper');await page.getByRole('listbox',{name:'Matching products',exact:true}).waitFor();await page.getByRole('combobox',{name:'Search the catalogue',exact:true}).press('ArrowDown');await page.getByRole('combobox',{name:'Search the catalogue',exact:true}).press('Enter');await page.waitForURL('**/products/*');
+  await page.getByRole('combobox',{name:'Search the catalogue',exact:true}).fill('GL-0001');await page.getByRole('listbox',{name:'Matching products',exact:true}).waitFor();await page.getByRole('combobox',{name:'Search the catalogue',exact:true}).press('ArrowDown');await page.getByRole('combobox',{name:'Search the catalogue',exact:true}).press('Enter');await page.waitForURL('**/products/*');
   await page.getByRole('button',{name:'Add to cart',exact:true}).click();await page.getByRole('status').filter({hasText:'Added to your cart.'}).waitFor();await page.getByRole('button',{name:'View cart',exact:true}).click();await page.waitForURL('**/cart');
   await page.locator('.cart-row').getByRole('button',{name:/Remove /}).click();await page.getByRole('button',{name:'Undo',exact:true}).click();assert.equal(await page.locator('.cart-row').count(),1);
   await page.getByRole('button',{name:'Clear cart',exact:true}).click();await page.getByRole('dialog').waitFor();await page.getByRole('dialog').getByRole('button',{name:'Go back',exact:true}).click();assert.equal(await page.locator('.cart-row').count(),1);

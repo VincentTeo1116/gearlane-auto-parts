@@ -155,7 +155,9 @@ Products are archived to preserve historical orders. Accounts with orders or rel
 
 ### Conversation system
 
-Customer support and private staff chat use a persistent conversation view with message history, optional support-product attachments and sender timestamps. Supabase Realtime updates are supplemented by automatic **five-second polling** while the page is open. Sync also runs after reconnection or returning to the tab. Requests are coalesced to prevent overlapping polls, and timers/listeners are removed when leaving chat. Browser background-tab throttling and network delays can affect exact timing.
+Customer support and private staff chat use a persistent conversation view with message history, optional support-product attachments and sender timestamps. Customer seller chat opens as a **bottom-right window above 760px** and a **full-screen conversation on phones**. Customers can keep browsing on desktop, expand/restore the window or minimise it without losing a draft or pending send. Mobile uses a native modal dialog for background isolation and focus containment, safe-area spacing and visual-viewport resizing for the on-screen keyboard. The staff inbox retains its workspace layout. Existing `/messages` links open the customer chat; directly loading that URL opens chat over the catalogue.
+
+Supabase Realtime updates are supplemented by automatic **five-second polling** while the conversation is open. Minimising pauses polling unless a pending delivery still needs confirmation; reopening resumes sync and keeps loaded history. Sync also runs after reconnection or returning to the tab. Requests are coalesced to prevent overlapping polls, and timers/listeners are removed when chat becomes inactive or unmounts. Browser background-tab throttling and network delays can affect exact timing. The compact safety warning expands to show the full privacy guidance. This is human seller support, not an AI chatbot, and it makes no promise of instant replies.
 
 Each send shows a pending bubble, locks the Send button and keeps the draft until delivery is confirmed. An unconfirmed send offers an explicit retry using the same unique reference, or Keep as draft. Draft references survive that action so an unchanged retry remains duplicate-safe. Drafts are held in page memory per conversation, not saved to local storage; leaving/reloading the page discards unsent draft text. A successful server response is shown as Sent, not as proof that the recipient has read the message.
 
@@ -251,6 +253,7 @@ Paths below are relative to the application root, whether this is the standalone
 | `npm run test:browser` | Run preview browser workflows; requires Chromium and free port 5188 |
 | `npm run test:responsive` | Check guided flows and layouts from 320px to 1920px; requires Chromium and free port 5189 |
 | `npm run test:chat` | Check two-way chat polling, pending sends, retries, privacy and history; requires Chromium and free port 5190 |
+| `npm run test:chat-ui` | Check desktop chat window, full-screen mobile, drafts, resize, pending sends and product attachments; requires Chromium and free port 5197 |
 | `npm run test:experience` | Check customer search, cart feedback, registration, loading/success/error states and motion; requires Chromium and free port 5191 |
 | `npm run test:banners` | Check banner uploads, drafts, publishing, phone artwork, controls, access boundaries and scoped loading; requires Chromium and free port 5192 |
 | `npm run seed:sql` | Regenerate seed/setup SQL files without applying them |
@@ -284,6 +287,7 @@ npx playwright install chromium
 npm run test:browser
 npm run test:responsive
 npm run test:chat
+npm run test:chat-ui
 npm run test:experience
 npm run test:banners
 ```
@@ -293,6 +297,8 @@ The automated database test runs real Postgres through PGlite with mock Supabase
 Responsive checks cover customer and admin pages at 320, 390, 768, 1024, 1440 and 1920 pixels, plus worker pages at phone, tablet and desktop widths. They check horizontal overflow, filter open/close behaviour, guest-cart continuity, checkout validation and address editing, shopping guidance, mobile workspace navigation and queue filters. Screenshots are saved to `.generated/responsive/`. These are automated browser checks, not a substitute for usability sessions with real shoppers or physical-device testing.
 
 Chat tests suppress preview push events to verify the five-second polling fallback between customer and worker tabs. They exercise pending-send locking, repeat-submit prevention, ambiguous connection failure and duplicate-safe retry, offline drafts, history preservation, private staff membership, closed conversations and polling cleanup. Unit tests cover validation, message merging, overlapping sync requests and cleanup. PGlite tests also verify the delivery-aware RPC's idempotency and validation.
+
+Seller-chat layout checks cover widths from 320px to 1920px, native modal behaviour on phones, desktop browsing with the window open, expand/restore, minimised drafts and sends, optional product inclusion, a first conversation and a reduced-height mobile composer. These are browser simulations; physical-device keyboard behaviour still benefits from deployment acceptance testing. Screenshots are saved to `.generated/chat/`.
 
 Customer-experience tests exercise search suggestions with keyboard selection, category expansion, cart removal/clear confirmation and undo, inline registration validation, pending submission, registration success versus email confirmation, retained guest carts, order confirmation, loading skeletons, 404 motion, reduced-motion preference, notification timing and load-error recovery. The test suite simulates loading delays and email-confirmation responses in preview mode; it does not create live accounts or claim to test email delivery. Screenshots are saved to `.generated/customer-ui/`.
 
