@@ -13,4 +13,5 @@ import './readability.css';
 import './seller-chat.css';
 import './design-refresh.css';
 import './design-flows.css';
+import './design-v3.css';
 createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);

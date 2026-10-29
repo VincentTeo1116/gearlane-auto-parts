@@ -24,7 +24,7 @@ export function StoreChrome() {
         <div className="header-icons">
           {profile ? <button className="icon-link notification-control" aria-label="Notifications" onClick={() => setDialog({type: 'notifications'})}><Bell size={22}/>{unread ? <small>{unread}</small> : null}</button> : null}
           <Link to="/account" go={go} className="account-link"><User size={22}/><span>{profile ? profile.full_name.split(' ')[0] : 'Sign in'}<small>{profile ? 'Your account' : 'or create an account'}</small></span></Link>
-          <Link to="/cart" go={go} className="header-cart" aria-label={'Cart, ' + count + ' items'}><ShoppingBag size={22}/><span>Cart <b key={count} className="count-pop">{count}</b></span></Link>
+          <Link to="/cart" go={go} className="header-cart" aria-label={'Cart, ' + count + ' items'}><ShoppingBag size={22}/><span>Cart <b key={count} className={"count-pop"+(count?"":" zero")}>{count}</b></span></Link>
           <button className="icon-button mobile-menu" aria-label="Toggle navigation" aria-expanded={menu} aria-controls="store-primary-navigation" onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</button>
         </div>
       </div>
@@ -137,9 +137,10 @@ export function WorkspaceWelcome() {
   const preparing=data.orders.filter(o=>o.status==='processing').length;
   const requested=data.refunds.filter(r=>r.status==='requested').length;
   const unconfirmed=data.products.filter(p=>p.active&&(!p.price_confirmed||p.stock===0)).length;
+  const low=data.products.filter(p=>p.active&&p.stock<10).length;
   const setup=profile.role==='admin'&&!data.settings.checkout_enabled;
   return <>
     {setup ? <section className="setup-guide"><div><span className="eyebrow">GET YOUR STORE READY</span><h2>A few checks before your first sale</h2><p>Checkout is currently disabled. Complete these steps before accepting orders.</p></div><div className="setup-links"><Link to="/workspace/products" go={go}><span>1</span><div><b>Confirm products and stock</b><small>{unconfirmed} active items need a confirmed price or available stock</small></div><ChevronRight size={18}/></Link><Link to="/workspace/settings" go={go}><span>2</span><div><b>Add bank and delivery details</b><small>Check your account, charges and return policy</small></div><ChevronRight size={18}/></Link><Link to="/workspace/settings" go={go}><span>3</span><div><b>Enable checkout when ready</b><small>Only confirmed, stocked products can be purchased</small></div><ChevronRight size={18}/></Link></div></section> : null}
-    <section className="work-queue" aria-label="Priority tasks">{[[pending,'Verify payments','Check the actual bank deposit','/workspace/orders?payment=submitted',CreditCard],[preparing,'Prepare orders','Pack items and record shipment','/workspace/orders?status=processing',Package],[requested,'Review refunds','Check eligibility and returned goods','/workspace/refunds',ClipboardCheck]].map(([count,title,text,to,Icon])=><Link key={title} to={to} go={go}><Icon size={23}/><div><b>{title}<span>{count}</span></b><small>{text}</small></div><ArrowRight size={18}/></Link>)}</section>
+    <section className="work-queue" aria-label="Priority tasks">{[[pending,'Verify payments','Check the actual bank deposit','/workspace/orders?payment=submitted',CreditCard],[preparing,'Prepare orders','Pack items and record shipment','/workspace/orders?status=processing',Package],[requested,'Review refunds','Check eligibility and returned goods','/workspace/refunds',ClipboardCheck],[low,'Restock items','Products with fewer than 10 units','/workspace/restock',Boxes]].map(([count,title,text,to,Icon])=><Link key={title} to={to} go={go}><Icon size={23}/><div><b>{title}<span>{count}</span></b><small>{text}</small></div><ArrowRight size={18}/></Link>)}</section>
   </>;
 }
