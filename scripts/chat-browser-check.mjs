@@ -29,7 +29,7 @@ try{
   assert.equal(await customer.getByRole('button',{name:'Sending…',exact:true}).isDisabled(),true);
   await customer.locator('.message-composer').evaluate(form=>{form.requestSubmit();form.requestSubmit();});
   assert.equal(await customer.locator('.pending-message').count(),1);
-  await worker.getByText('Customer message delivered by five-second polling.',{exact:true}).waitFor();
+  await worker.getByRole('log',{name:'Conversation messages'}).getByText('Customer message delivered by five-second polling.',{exact:true}).waitFor();
   assert.equal(await customer.evaluate(()=>window.__sendCount),1,'Repeated submit cannot send twice');
   await customer.getByRole('button',{name:'Send',exact:true}).waitFor();
   await worker.getByLabel('Message',{exact:true}).fill('Worker reply, line one.');await worker.getByLabel('Message',{exact:true}).press('Shift+Enter');await worker.getByLabel('Message',{exact:true}).pressSequentially('Line two.');await worker.getByLabel('Message',{exact:true}).press('Enter');
@@ -63,7 +63,7 @@ try{
 
   const admin=await pageFor('admin');await worker.getByRole('button',{name:'New staff chat',exact:true}).click();await worker.getByLabel('Staff member',{exact:true}).selectOption({label:'GearLane Admin (admin)'});await worker.getByRole('button',{name:'Open conversation',exact:true}).click();await worker.getByRole('dialog').waitFor({state:'hidden'});
   await worker.getByLabel('Message',{exact:true}).fill('Private staff chat message.');await worker.getByRole('button',{name:'Send',exact:true}).click();
-  await admin.locator('.conversation-list button').filter({hasText:'Team chat'}).first().waitFor();await admin.locator('.conversation-list button').filter({hasText:'Team chat'}).first().click();await admin.getByText('Private staff chat message.',{exact:true}).waitFor();
+  await admin.locator('.conversation-list button').filter({hasText:'Team chat'}).first().waitFor();await admin.locator('.conversation-list button').filter({hasText:'Team chat'}).first().click();await admin.getByRole('log',{name:'Conversation messages'}).getByText('Private staff chat message.',{exact:true}).waitFor();
   assert.equal(await customer.locator('.conversation-list button').filter({hasText:'Team chat'}).count(),0);
   await admin.setViewportSize({width:390,height:844});assert.ok(await admin.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await mkdir('.generated/chat',{recursive:true});await admin.screenshot({path:'.generated/chat/staff-mobile.png',fullPage:true});await customer.screenshot({path:'.generated/chat/customer-desktop.png',fullPage:true});

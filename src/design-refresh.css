@@ -1,0 +1,111 @@
+/* Design refresh: final layer. Visual and usability polish only; no behavioural changes.
+   Loaded last so it wins over the earlier layers without rewriting them. */
+
+:root {
+  --muted: #4d5f69;           /* was #5c6c76 / #6b786e: lifts small text to AA (>=4.5:1 on white and on #f0f3f5) */
+  --ink: #1b3547;
+  --ink-soft: #3d5361;
+  --surface-soft: #f4f7f9;
+  --ring: #2f6f9a;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+/* ---------- Focus: one clear, consistent ring ---------- */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.workspace-sidebar :where(a, button):focus-visible { outline-color: #f0b580; outline-offset: -3px; }
+.skip-link:focus { box-shadow: 0 6px 24px #0b1e2c40; }
+
+/* ---------- Buttons: tactile states ---------- */
+.button, .add-button, .support-fab, .category-chips button { transition: background .15s var(--ease), transform .12s var(--ease), box-shadow .15s var(--ease), border-color .15s var(--ease); }
+.button:active, .add-button:active, .category-chips button:active { transform: translateY(1px) scale(.99); }
+.button:disabled, .add-button:disabled { transform: none; }
+
+/* ---------- Small supporting text: readable, not faint ---------- */
+.muted, .product-brand, .rating-line span, .product-card-foot small, .breadcrumb, .filters .muted { color: var(--muted); }
+.product-brand { text-transform: uppercase; font-weight: 650; letter-spacing: .6px; }
+.eyebrow { color: #4a6580; }
+
+/* ---------- Product cards: clearer hierarchy ---------- */
+.product-card { transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease); }
+@media (hover: hover) {
+  .product-card:hover { transform: translateY(-3px); box-shadow: 0 14px 32px #17324614; border-color: #c4d3dd; }
+}
+.product-card .product-name { color: var(--ink); font-weight: 700; line-height: 1.35; }
+.product-card .product-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rating-line { margin: 4px 0 12px; min-height: 1.4em; }
+.product-card-foot { padding-top: 14px; border-top: 1px solid #e6ecf0; }
+.product-card-foot b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.product-card-foot small:empty { display: none; }
+.product-label { font-weight: 700; background: #fff; color: #7a4a12; border: 1px solid #f0c48f; }
+.product-label.out { color: #7d2b26; border-color: #e5b3af; }
+.add-button { min-height: 44px; }
+.wishlist-button { width: 40px; height: 40px; display: grid; place-items: center; }
+
+/* ---------- Catalogue: scroll affordance on category chips, tidy filter header ---------- */
+.category-chips {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+  scroll-snap-type: x proximity;
+  padding-right: 36px;
+}
+.category-chips button { scroll-snap-align: start; color: var(--ink-soft); min-height: 44px; }
+.category-chips button:hover:not(.selected) { background: var(--surface-soft); border-color: #b7c8d3; }
+.filters :where(h2, h3, .filters-head) { text-wrap: balance; }
+.filter-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; }
+.filter-heading b { font-size: 1.0625rem; color: var(--ink); }
+.filter-heading .text-button { white-space: nowrap; color: var(--ring); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- Support chat button: stay out of the way of content ---------- */
+.support-fab { box-shadow: 0 8px 24px #0e22333d; }
+.support-fab:hover { transform: translateY(-2px); }
+.customer-page-root { padding-bottom: 72px; }          /* room so the floating button never hides the last row */
+@media (max-width: 760px) {
+  .support-fab { min-width: 48px; min-height: 48px; }  /* touch target */
+}
+
+/* ---------- Forms: larger touch targets, clearer errors ---------- */
+input, select, textarea { min-height: 44px; }
+textarea { min-height: 100px; }
+input[type=checkbox] { min-height: 0; width: 20px; height: 20px; }
+.quantity button { min-width: 44px; min-height: 44px; }
+input:user-invalid, select:user-invalid, textarea:user-invalid { border-color: #b4423b; background: #fff8f7; }
+
+/* ---------- Workspace (staff): density, scan-ability ---------- */
+.workspace-sidebar nav { overflow-y: auto; overscroll-behavior: contain; }
+.workspace-sidebar nav a { min-height: 42px; }
+.workspace-grid, .workspace-grid.equal { align-items: start; }   /* no stretched, half-empty panels */
+.stat-card > b { font-variant-numeric: tabular-nums; color: var(--ink); }
+.stat-card { transition: box-shadow .2s var(--ease), border-color .2s var(--ease); }
+a.stat-card:hover, .stat-card:hover { box-shadow: 0 8px 22px #17324612; }
+.bar-chart button > span { background: #7fa4ba; }                /* >=3:1 against the white panel */
+.bar-chart button.selected > span, .bar-chart button:hover > span { background: #2f5e7a; }
+.bar-chart button:focus-visible { outline-offset: 0; }
+.chart-readout { color: var(--ink); }
+table th { color: var(--ink-soft); font-weight: 700; }
+table td, table th { font-variant-numeric: tabular-nums; }
+.table-scroll { scrollbar-width: thin; }
+tbody tr:hover { background: #f6f9fb; }
+
+/* ---------- Status badges: never rely on colour alone (text is always present) ---------- */
+.badge { font-weight: 700; letter-spacing: .1px; }
+.badge.verified, .badge.delivered, .badge.paid, .badge.approved { background: #e1efd4; color: #2f5120; }
+.badge.awaiting-payment, .badge.awaiting, .badge.submitted, .badge.requested, .badge.open { background: #fff0cc; color: #6f4f0a; }
+.badge.cancelled, .badge.rejected, .badge.refunded { background: #fbe4dd; color: #8a3a28; }
+.badge.shipped, .badge.processing { background: #e1ebf6; color: #2f5373; }
+
+/* ---------- Motion + contrast preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .product-card:hover, .support-fab:hover { transform: none; }
+}
+@media (forced-colors: active) {
+  .button, .add-button, .category-chips button, .product-card { border: 1px solid CanvasText; }
+  .category-chips button.selected { outline: 2px solid Highlight; }
+}
+@media print {
+  .support-fab, .preview-banner, .skip-link, .workspace-sidebar { display: none !important; }
+}

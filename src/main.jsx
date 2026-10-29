@@ -11,4 +11,5 @@ import './customer-ui.css';
 import './polish.css';
 import './readability.css';
 import './seller-chat.css';
+import './design-refresh.css';
 createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);
