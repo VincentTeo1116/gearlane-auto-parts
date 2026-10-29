@@ -1,0 +1,76 @@
+/* Design refresh, part 2: checkout, product page and order lists.
+   Loaded after design-refresh.css and reuses its tokens. */
+
+/* ======================================================================
+   Checkout: one clear 3-stage progress, plus a persistent total on phones
+   ====================================================================== */
+.guided-checkout > .shopping-steps { display: none; }   /* replaced by .stage-progress */
+.stage-progress { list-style: none; display: flex; align-items: stretch; margin: 0 0 24px; padding: 0; }
+.stage-progress li { position: relative; flex: 1; display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #fff; border: 1px solid #d5e0e7; color: var(--muted); min-height: 56px; }
+.stage-progress li:first-child { border-radius: 12px 0 0 12px; }
+.stage-progress li:last-child { border-radius: 0 12px 12px 0; }
+.stage-progress li + li { margin-left: -1px; }
+.stage-progress li > span { width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: #e8eef3; font-weight: 750; font-size: .9375rem; }
+.stage-progress b, .stage-progress button { font-weight: 650; font-size: 1rem; color: inherit; }
+.stage-progress button { border: 0; background: none; padding: 0; text-decoration: underline; text-underline-offset: 3px; color: var(--ring); min-height: 44px; }
+.stage-progress small { font-size: .8125rem; color: var(--muted); margin-left: auto; }
+.stage-progress .current { background: var(--ink); border-color: var(--ink); color: #fff; z-index: 1; }
+.stage-progress .current > span { background: #f0b580; color: #20394b; }
+.stage-progress .complete > span { background: #dcefe2; color: #1f5230; }
+.stage-progress .complete { color: var(--ink); }
+.stage-progress .after { background: var(--surface-soft); border-style: dashed; }
+.checkout-total-bar { display: none; }
+@media (max-width: 760px) {
+  .stage-progress { flex-direction: column; }
+  .stage-progress li { min-height: 48px; padding: 8px 14px; }
+  .stage-progress li:first-child { border-radius: 12px 12px 0 0; }
+  .stage-progress li:last-child { border-radius: 0 0 12px 12px; }
+  .stage-progress li + li { margin: -1px 0 0; }
+  .stage-progress li:not(.current):not(.complete) b { font-weight: 500; }
+  .checkout-total-bar { position: fixed; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 20; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 14px; padding: 12px 16px; min-height: 52px; background: var(--ink); color: #fff; box-shadow: 0 10px 28px #0b1e2c55; }
+  .checkout-total-bar b { font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+  .checkout-total-bar em { margin-left: auto; font-style: normal; font-weight: 650; color: #f0b580; }
+  .guided-checkout { padding-bottom: 150px; }
+}
+
+/* ======================================================================
+   Product page: sticky gallery, key specs at a glance, live total
+   ====================================================================== */
+@media (min-width: 900px) {
+  .detail-art { position: sticky; top: 24px; align-self: start; }
+}
+.at-a-glance { list-style: none; margin: 4px 0 18px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.at-a-glance li { background: var(--surface-soft); border: 1px solid #e0e8ee; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.at-a-glance span { font-size: .8125rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; font-weight: 650; }
+.at-a-glance b { font-size: 1rem; color: var(--ink); overflow-wrap: anywhere; }
+.line-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 14px 0 10px; padding: 12px 14px; border-radius: 10px; background: #f1f7f3; border: 1px solid #cfe3d6; color: #1f5230; }
+.line-total b { font-size: 1.375rem; font-variant-numeric: tabular-nums; letter-spacing: -.4px; }
+.detail-price { font-variant-numeric: tabular-nums; }
+.detail-tabs button { min-height: 44px; }
+
+/* ======================================================================
+   Orders (customer and staff): quick status pills, clear next-action cue
+   ====================================================================== */
+.order-pills { display: flex; gap: 8px; margin: 0 0 18px; padding: 2px 0 6px; overflow-x: auto; scrollbar-width: thin; }
+.order-pills button { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid #cfdae2; background: #fff; border-radius: 999px; font-weight: 650; color: var(--ink-soft); white-space: nowrap; transition: background .15s, border-color .15s; }
+.order-pills button:hover:not(.selected) { background: var(--surface-soft); border-color: #a9bccb; }
+.order-pills button.selected { background: var(--ink); border-color: var(--ink); color: #fff; }
+.order-pills button span { font-size: .8125rem; min-width: 22px; text-align: center; padding: 1px 7px; border-radius: 999px; background: #e8eef3; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.order-pills button.selected span { background: #ffffff2e; color: #fff; }
+.order-list-card { transition: box-shadow .2s var(--ease), border-color .2s var(--ease); }
+.order-list-card:hover { box-shadow: 0 8px 22px #17324612; border-color: #b9cad5; }
+.order-list-card.needs-action { border-left: 5px solid #e0a040; }
+.order-list-top { align-items: center; flex-wrap: wrap; }
+.order-list-top b { font-variant-numeric: tabular-nums; }
+.action-tag { background: #fff0cc; color: #6f4f0a; border: 1px solid #ecc875; border-radius: 999px; padding: 3px 10px; font-size: .8125rem; font-weight: 750; white-space: nowrap; }
+.waiting { font-style: normal; color: #8a2f28; font-weight: 700; }
+.order-list-next { color: var(--ink-soft); }
+@media (max-width: 760px) {
+  .order-list-top { gap: 8px 10px; }
+  .order-list-bottom { flex-direction: column; align-items: stretch; gap: 12px; }
+  .order-list-bottom .button { width: 100%; }
+}
+
+@media (max-width: 760px) {
+  body:has(.checkout-total-bar) .support-fab { bottom: calc(142px + env(safe-area-inset-bottom)); }
+}
