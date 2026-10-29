@@ -9,4 +9,5 @@ import './experience.css';
 import './chat.css';
 import './customer-ui.css';
 import './polish.css';
+import './readability.css';
 createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);

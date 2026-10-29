@@ -6,7 +6,7 @@ The system includes a researched 56-product catalogue, manual bank-transfer chec
 
 The responsive interface guides new shoppers through finding parts, checking their cart, entering delivery details, reviewing the order and completing bank transfer. Product cards use labelled actions, cart confirmation links directly to the cart, and each order explains who acts next. A How to order guide is available from navigation. Guest cart items are retained when a customer signs in, including a session established after email confirmation.
 
-Typography uses self-hosted Manrope variable fonts across customer and staff screens, with system fallbacks and `font-display: swap` so text stays visible while fonts load. The font files and their open font licence are supplied by `@fontsource-variable/manrope`; no Google Fonts connection is required.
+Typography uses self-hosted Manrope variable fonts across customer and staff screens, with system fallbacks and `font-display: swap` so text stays visible while fonts load. The font files and their open font licence are supplied by `@fontsource-variable/manrope`; no Google Fonts connection is required. Reading copy has a 16px base with more generous line spacing; supporting text and controls use larger relative sizes. The customer shop subtitle is 13px on desktop and 12px on phones, with balanced wrapping on narrow screens.
 
 The customer design uses navy, warm neutrals and amber actions, with a service-focused homepage, a varied cross-category selection, keyboard-accessible search suggestions and category shortcuts. Product details, cart, checkout, account pages, order tracking and staff tools share the same visual language. The homepage selection is curated by category and is not labelled as a sales ranking.
 

@@ -19,7 +19,7 @@ export function StoreChrome() {
     <div className="store-promise"><div className="container"><span><ShieldCheck size={15}/> Find the right part. Ask us if you’re unsure.</span><button onClick={() => setDialog({type: 'shopping-guide'})}>New here? How to order <ArrowRight size={14}/></button></div></div>
     <header className="store-header redesigned-header">
       <div className="container header-main">
-        <Link to="/" go={go} className="brand" aria-label="GearLane home"><span className="brand-mark">G<span/></span><span>{data?.settings.store_name || 'GearLane Auto Parts'}<small>PARTS. SUPPORT. PEACE OF MIND.</small></span></Link>
+        <Link to="/" go={go} className="brand" aria-label="GearLane home"><span className="brand-mark">G<span/></span><span>{data?.settings.store_name || 'GearLane Auto Parts'}<small><span>PARTS. SUPPORT.</span>{' '}<span>PEACE OF MIND.</span></small></span></Link>
         <CatalogueSearch/>
         <div className="header-icons">
           {profile ? <button className="icon-link notification-control" aria-label="Notifications" onClick={() => setDialog({type: 'notifications'})}><Bell size={22}/>{unread ? <small>{unread}</small> : null}</button> : null}

@@ -18,6 +18,7 @@ try {
   await mkdir('.generated/responsive',{recursive:true});
   const visit=async route=>{
     await page.goto(base+route);
+    await page.locator('#page-main').waitFor();
     await page.locator('.loading-screen').waitFor({state:'hidden'});
     await page.locator('.fatal').waitFor({state:'hidden'});
     await page.locator('#page-main').waitFor();
@@ -94,6 +95,7 @@ try {
     for(const route of ['/workspace','/workspace/orders','/workspace/products','/workspace/users','/workspace/promotions','/workspace/settings','/workspace/messages']){
       await visit(route);await fits(route);
       if(route==='/workspace/products'&&width<=560){
+        await page.locator('td[data-label="Price"]').first().waitFor();
         assert.ok(await page.locator('td[data-label="Price"]').count()>0,'Mobile product cards retain field labels');
         assert.equal(await page.locator('.table-scroll thead').isVisible(),false);
         await page.getByRole('button',{name:/Edit /}).first().click();
