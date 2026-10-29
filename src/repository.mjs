@@ -11,14 +11,16 @@ const optional=async promise=>{const response=await promise;if(response.error&&[
 const result=async promise=>{const {data,error}=await promise;if(error)throw error;return data;};
 function createLiveRepository(){
  const supabase=createClient(url,key,{auth:{storage:window.sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},global:{fetch:(input,options={})=>fetch(input,{...options,signal:options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(20000)]):AbortSignal.timeout(20000)})}});
- let onChange=()=>{};
+ let onChange=()=>{},knownRole=null;
  const coreCache=new Map();
  const invalidate=()=>coreCache.clear();
  const reads=new Set(['record_event','dashboard_stats','staff_directory','manage_conversation','read_notifications','start_conversation','send_message','send_chat_message','toggle_wishlist','chat_inbox','start_support_enquiry','check_promotion','admin_get_settings','dashboard_previous_period','toggle_stock_alert']);
 /* Milestones that email the customer. The server (api/order-email.js) re-checks the real order state, so this only asks. */
  const ORDER_EMAILS={create_order:(args,value)=>[value,'placed'],verify_payment:args=>[args.p_order_id,args.p_approved?'payment_verified':'payment_rejected'],set_order_status:args=>['shipped','delivered'].includes(args.p_status)?[args.p_order_id,args.p_status]:null,cancel_order:args=>[args.p_order_id,'cancelled']};
  const notifyOrder=async(orderId,event)=>{try{const {data}=await supabase.auth.getSession(),token=data.session?.access_token;if(!token||typeof orderId!=='string')return;await fetch('/api/order-email',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({order_id:orderId,event})});}catch{/* best effort: an email problem must never affect the order */}};
- const rpc=async(name,args={})=>{if(!reads.has(name))invalidate();try{const value=await result(supabase.rpc(name,args));const email=ORDER_EMAILS[name]?.(args,value);if(email)notifyOrder(...email);return value;}finally{if(!reads.has(name))invalidate();}};
+ /* After a customer writes to the seller, ask the server to email the store owner. Best effort; the server re-checks everything. */
+ const notifyStaff=async conversationId=>{try{if(knownRole!=='customer'||typeof conversationId!=='string')return;const {data}=await supabase.auth.getSession(),token=data.session?.access_token;if(!token)return;await fetch('/api/staff-alert',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({conversation_id:conversationId})});}catch{/* an email problem must never affect the chat */}};
+ const rpc=async(name,args={})=>{if(!reads.has(name))invalidate();try{const value=await result(supabase.rpc(name,args));const email=ORDER_EMAILS[name]?.(args,value);if(email)notifyOrder(...email);if(name==='send_chat_message')notifyStaff(args.p_conversation_id);return value;}finally{if(!reads.has(name))invalidate();}};
  const banners=async(optional=false)=>{const response=await supabase.from('promotion_banners').select('*').order('position').order('created_at',{ascending:false}).limit(100);if(response.error){if(optional)return [];throw response.error;}return response.data;};
  const core=profile=>{
   const cacheKey=(profile?.id||'guest')+':'+(profile?.role||'guest');
@@ -37,7 +39,7 @@ function createLiveRepository(){
   async resetPassword(email){return result(supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/account?reset=1'}));},
   async changePassword(password){return result(supabase.auth.updateUser({password}));},
   async profile(id){const rows=await result(supabase.from('profiles').select('*').eq('id',id).limit(1));if(!rows.length)throw new Error('Your account profile is unavailable or inactive. Contact the administrator.');return rows[0];},
-  async snapshot(profile,{sections}={}){
+  async snapshot(profile,{sections}={}){knownRole=profile?.role||null;
    const want=new Set(sections||['orders','refunds','conversations','notifications','wishlist','restock','directory','users','audit','banners']),queries={};
    if(profile){
     if(want.has('orders'))queries.orders=supabase.from('orders').select('*,items:order_items(*),events:order_events(*)').order('created_at',{ascending:false}).limit(200);

@@ -42,6 +42,8 @@ export function createHandler({client=createClient,env=process.env,fetcher=fetch
   res.setHeader('Cache-Control','no-store');
   const fail=(code,error)=>res.status(code).json({error});
   if(req.method!=='POST'){res.setHeader('Allow','POST');return fail(405,'Method not allowed.');}
+  // Off by default. Resend can only send to customers once a domain is verified; until then set nothing and no attempt is made.
+  if(env.EMAIL_CUSTOMERS!=='true')return res.status(200).json({sent:false,reason:'customer_emails_off'});
   const url=env.SUPABASE_URL,publicKey=env.SUPABASE_PUBLISHABLE_KEY,secret=env.SUPABASE_SERVICE_ROLE_KEY;
   if(!url||!publicKey||!secret||!env.SITE_URL||!env.RESEND_API_KEY||!env.EMAIL_FROM)return fail(503,'Order emails are not configured.');
   let origin;try{origin=new URL(env.SITE_URL).origin;}catch{return fail(503,'Order emails are not configured.');}

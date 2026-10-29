@@ -13,7 +13,7 @@ test('order-email log, stock alerts and vehicle fitment obey their access rules'
   await db.exec(`create role anon;create role authenticated;create schema auth;create schema storage;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}');create table storage.objects(bucket_id text,name text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema public,auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`);
   for(const name of ['001-schema.sql','002-commerce.sql','003-workspace.sql','007-chat-delivery.sql'])await db.exec(await sql(name));
   await db.exec((await sql('008-promotion-banners.sql')).split('-- Supabase Storage')[0]);
-  for(const name of ['012-order-emails.sql','013-stock-alerts.sql','014-vehicle-fitment.sql']){await db.exec(await sql(name));await db.exec(await sql(name));} // idempotent
+  for(const name of ['012-order-emails.sql','013-stock-alerts.sql','014-vehicle-fitment.sql','015-staff-alerts.sql']){await db.exec(await sql(name));await db.exec(await sql(name));} // idempotent
   for(const [role,id] of Object.entries(ids))await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3)",[id,role+'@example.test',JSON.stringify({full_name:'Test '+role})]);
   await db.query("update profiles set role='worker' where id=$1",[ids.worker]);await db.query("update profiles set role='admin' where id=$1",[ids.admin]);
   const product=(id,stock,extra='')=>db.exec(`insert into products(id,sku,name,brand,category,description,price_cents,price_confirmed,stock,active) values('${id}','SKU-${id}','Product ${id}','Brand','Cat','A test product description.',1000,${extra.includes('unconfirmed')?'false':'true'},${stock},${extra.includes('inactive')?'false':'true'})`);
@@ -28,6 +28,17 @@ test('order-email log, stock alerts and vehicle fitment obey their access rules'
     await assert.rejects(()=>db.query('select * from order_emails'),/permission denied/,role+' cannot read the email log');
     await assert.rejects(()=>db.exec("delete from order_emails"),/permission denied/);
   });
+
+  // ---- staff alert throttle: server only
+  await db.exec(`insert into conversations(id,kind,customer_id,title,created_by) values('50000000-0000-4000-8000-000000000001','support','${ids.customer}','Brake pads','${ids.customer}')`);
+  await db.exec("insert into staff_alerts(conversation_id) values('50000000-0000-4000-8000-000000000001')");
+  await assert.rejects(()=>db.exec("insert into staff_alerts(conversation_id) values('50000000-0000-4000-8000-000000000001')"),/duplicate|unique/,'one slot per conversation');
+  for(const role of ['anon','customer','worker','admin'])await as(role,async()=>{
+    await assert.rejects(()=>db.query('select * from staff_alerts'),/permission denied/,role+' cannot read alert timing');
+    await assert.rejects(()=>db.exec("update staff_alerts set last_sent_at=now()-interval '1 day'"),/permission denied/,role+' cannot reset the throttle');
+  });
+  await db.exec("delete from conversations where id='50000000-0000-4000-8000-000000000001'");
+  assert.equal((await db.query('select count(*)::int as n from staff_alerts')).rows[0].n,0,'the slot goes when its conversation does');
 
   // ---- stock alerts
   await as('customer',async()=>{

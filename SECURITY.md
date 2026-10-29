@@ -18,7 +18,8 @@ Do not put exploit details, access tokens, customer records, private receipts or
 - Promotion codes cannot be listed. Customers check one code at a time; every failure returns one generic message after a short delay. Admins manage the full list.
 - Signed-out visitors can read review text but not reviewer or order identifiers.
 - `/api/client-error` is unauthenticated by design (it must work for signed-out visitors). It accepts same-origin requests only, a body under 4 KB, a fixed set of text fields that are truncated and stripped of control characters, and 20 reports per address per minute. It writes one log line and stores nothing.
-- `/api/order-email` sends a customer email only if the caller can read the order under row-level security and the order is really in the state being announced, sends each milestone once, always uses the order's own customer as the recipient, and never includes bank details. The email provider key lives only in the Vercel server environment.
+- `/api/staff-alert` emails only the configured store-owner address. It requires the caller to be the customer of a support conversation, reads the message text from the database (a recent message by that caller, never text from the request), and allows one email per conversation every five minutes.
+- `/api/order-email` sends a customer email only if the caller can read the order under row-level security and the order is really in the state being announced, sends each milestone once, always uses the order's own customer as the recipient, and never includes bank details. Customer emails are off unless `EMAIL_CUSTOMERS=true`. The email provider key lives only in the Vercel server environment.
 - `/api/health`, `/sitemap.xml` and `/robots.txt` use only the public key and return nothing a visitor cannot already see.
 - CSV exports neutralise cells that a spreadsheet could run as formulas. Exports contain personal data and must be handled as such.
 

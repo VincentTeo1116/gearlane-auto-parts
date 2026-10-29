@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {composeEmail,createHandler,esc} from '../api/order-email.js';
 
 const ORDER='10000000-0000-4000-8000-0000000000aa';
-const env={SUPABASE_URL:'https://x.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public',SUPABASE_SERVICE_ROLE_KEY:'secret',SITE_URL:'https://store.example',RESEND_API_KEY:'re_key',EMAIL_FROM:'GearLane <orders@store.example>'};
+const env={EMAIL_CUSTOMERS:'true',SUPABASE_URL:'https://x.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public',SUPABASE_SERVICE_ROLE_KEY:'secret',SITE_URL:'https://store.example',RESEND_API_KEY:'re_key',EMAIL_FROM:'GearLane <orders@store.example>'};
 const res=()=>({code:200,headers:{},body:undefined,setHeader(k,v){this.headers[k]=v;},status(n){this.code=n;return this;},json(b){this.body=b;return this;}});
 const req=(extra={})=>({method:'POST',headers:{origin:'https://store.example',authorization:'Bearer valid.token'},body:{order_id:ORDER,event:'shipped'},...extra});
 const baseOrder={id:ORDER,order_number:10077,customer_id:'cust',status:'shipped',payment_status:'verified',total_cents:13845,address:{name:'Amir <script>Rahman'},carrier:'J&T',tracking_number:'JT123'};
@@ -69,4 +69,13 @@ test('emails escape customer text and never include bank details',()=>{
   assert.equal(JSON.stringify(mail).includes('123456789'),false);assert.match(mail.text,/never ask for your banking password/);
   assert.equal(esc('<&">'),'&lt;&amp;&quot;&gt;');
   for(const event of ['placed','payment_verified','payment_rejected','shipped','delivered','cancelled'])assert.ok(composeEmail(event,baseOrder,{storeName:'S',link:'https://s/x'}).subject.includes('GL-10077'),event);
+});
+
+test('customer emails are off unless EMAIL_CUSTOMERS is true, so an unverified Resend domain causes no failed sends',async()=>{
+  for(const value of [undefined,'','false','TRUE','1']){
+    let called=0;
+    const handler=createHandler({client:()=>{called++;throw new Error('must not be reached');},env:{...env,EMAIL_CUSTOMERS:value},fetcher:async()=>{called++;return{ok:true};}});
+    const r=res();await handler(req(),r);
+    assert.deepEqual(r.body,{sent:false,reason:'customer_emails_off'},String(value));assert.equal(r.code,200);assert.equal(called,0,'no database or email call is made');
+  }
 });

@@ -16,6 +16,7 @@ Database changes always go first, then the app. The app is written to keep worki
    | `012-order-emails.sql` | Remembers which order email was sent | Order emails are not sent |
    | `013-stock-alerts.sql` | "Notify me when back in stock" | Tapping "Notify me" shows an error; nothing else breaks |
    | `014-vehicle-fitment.sql` | Vehicle finder and fitment lists | The vehicle finder does not appear |
+   | `015-staff-alerts.sql` | Limits owner alert emails to one per conversation every 5 minutes | Owner alert emails are not sent |
 
 3. **Deploy the app** (push to `main`; Vercel builds it). CI must be green first: unit tests, build, every browser check and the dependency audit.
 4. **Check `/api/health`** returns `{"status":"ok"}`, then open the store, sign in as a customer and as staff, and place and cancel a test order.
@@ -40,23 +41,46 @@ To get alerts or keep them longer, add a **Vercel Log Drain** to your log servic
 ### Database
 Supabase, Reports shows API and database health. Watch connection count, slow queries and storage. Turn on the email alerts Supabase offers for usage limits.
 
-## 3. Order emails (Resend)
+## 3. Email through Resend
 
-Customers receive an email when an order is placed, payment is verified or rejected, shipped, delivered, or cancelled. Emails contain the order number, amount and a link, never bank details.
+There are two kinds of email from the app, and they have different requirements.
+
+### 3a. "A customer wrote to the seller" alerts to you (works with the Resend onboarding sender)
+
+When a customer sends a message in the chat, you get an email so you know to reply. It works without owning a domain, because it only ever goes to **your own** address.
 
 Set these in the **Vercel server environment** (never with a `VITE_` prefix), then redeploy:
 
 | Variable | Value |
 | --- | --- |
 | `RESEND_API_KEY` | An API key from Resend |
-| `EMAIL_FROM` | For example `GearLane <orders@yourdomain.com>` on a domain you verified in Resend |
+| `EMAIL_FROM` | `GearLane <onboarding@resend.dev>` (Resend's test sender) |
+| `STAFF_ALERT_EMAIL` | The email address of your Resend account. Resend refuses any other recipient until you verify a domain |
 | `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SITE_URL` | Already needed for user management |
 
-Until your domain is verified in Resend you can only send to your own Resend account address, so test with an order placed by that address.
+Also run `supabase/015-staff-alerts.sql` once.
 
-How it works, so you can reason about problems: after an action succeeds, the browser asks `/api/order-email` to send the matching email. The server checks the caller may read that order and that the order is really in that state, sends once (the `order_emails` table prevents repeats), and releases the claim if sending fails so the next attempt can retry. Because the request comes from the browser, an email can be missed if the tab is closed at that exact moment. If a customer says an email never arrived, check the order's status in the workspace; the order itself is never affected.
+What you will see: an email titled "New message from <customer>" with the start of the message, the product they attached (if any) and a button that opens the conversation in the workspace. **Reply inside the workspace.** Replying to the email does not reach the customer, because the app does not relay email.
 
-Signup confirmation, password reset and staff invitation emails are separate: they are sent by Supabase Auth through the SMTP settings in the Supabase dashboard.
+Behaviour you should know:
+- One email per conversation every 5 minutes. A customer who sends ten messages in a minute causes one email; later messages are waiting in the workspace.
+- Staff replies never trigger an email.
+- The text comes from the database, not from the browser, so the endpoint cannot be used to send anything else.
+- Because the browser asks the server to send it, an alert can be missed if the customer closes the tab at that exact moment. The message itself is always saved. Check the workspace inbox now and then rather than relying only on email.
+- The alert is a notification, not a guarantee. If you need to be sure a message is seen, also check Messages in the workspace.
+
+### 3b. Emails to customers (order placed, payment verified, shipped, delivered, cancelled)
+
+These stay **off** until you can send to customers. Resend's onboarding sender can only deliver to your own address, so enabling them now would only produce failed sends. With `EMAIL_CUSTOMERS` unset or not exactly `true`, the app makes no attempt and nothing is logged as an error.
+
+To turn them on later:
+1. In Resend, add and verify your domain (it gives you DNS records to add).
+2. Change `EMAIL_FROM` to an address on that domain, for example `GearLane <orders@yourdomain.com>`.
+3. Set `EMAIL_CUSTOMERS=true`, run `supabase/012-order-emails.sql` if you have not, and redeploy.
+
+Customer emails contain the order number, amount and a link, never bank details. After an action succeeds the browser asks `/api/order-email`; the server checks the caller may read that order and that the order is really in that state, sends once (the `order_emails` table prevents repeats), and releases its claim if sending fails so the next attempt can retry.
+
+Signup confirmation, password reset and staff invitation emails are separate: Supabase Auth sends them through the SMTP settings in the Supabase dashboard, not through these variables.
 
 ## 4. Search visibility
 
