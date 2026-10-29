@@ -286,6 +286,8 @@ small, .small { font-size:1rem; }
 .modal-overlay { padding: 24px; }
 .modal { width: 580px; padding: 28px; border-radius: 16px; }
 .modal.wide { width: 850px; }
+.modal-overlay,.modal-overlay * { scrollbar-width:none; -ms-overflow-style:none; }
+.modal-overlay::-webkit-scrollbar,.modal-overlay *::-webkit-scrollbar { display:none; width:0; height:0; }
 .modal-heading h2 { font-size: 25px; }
 .modal > p, .modal form > p { font-size:1rem; }
 .guide-list { list-style: none; padding: 0; margin: 22px 0 28px; }
