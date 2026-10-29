@@ -35,6 +35,24 @@ try {
   const headerTop = await page.evaluate(() => Math.round(document.querySelector('.store-header').getBoundingClientRect().top));
   assert.equal(headerTop, 0, 'header stays pinned while scrolling and is not covered by the demo banner');
 
+  // Phone header: logo + name, cart and menu share one row, with the search directly below
+  const headerOneRow = async label => {
+    const box = await page.evaluate(() => {
+      const rect = selector => {const el = document.querySelector(selector);if (!el) return null;const b = el.getBoundingClientRect();return {top:b.top, bottom:b.bottom, left:b.left, right:b.right, mid:(b.top + b.bottom) / 2};};
+      return {brand:rect('.header-main > .brand'), cart:rect('.header-cart'), menu:rect('.mobile-menu'), search:rect('.header-search'), width:innerWidth};
+    });
+    assert.ok(Math.abs(box.brand.mid - box.cart.mid) < 12 && Math.abs(box.cart.mid - box.menu.mid) < 12, label + ': brand, cart and menu are not on one row ' + JSON.stringify(box));
+    assert.ok(box.search.top >= box.brand.bottom - 2 && box.search.top >= box.cart.bottom - 2, label + ': search should sit below the first row');
+    assert.ok(box.menu.right <= box.width && box.brand.right <= box.cart.left + 1, label + ': header content overflows');
+  };
+  for (const width of [320, 360, 390, 430, 600]) {
+    await page.setViewportSize({width, height:800});
+    await page.goto(base + '/');
+    await page.locator('.header-main').waitFor();
+    await headerOneRow('guest ' + width + 'px');
+  }
+  await page.setViewportSize({width:1440, height:900});
+
   // Customer: receive an order, rate with stars and highlights, see it on the product page
   await login('customer');
   await page.goto(base + '/orders');
@@ -80,6 +98,36 @@ try {
     await page.getByRole('button', {name:/^4 star/}).first().click();
     assert.ok(await page.locator('.review-card').count() >= 1);
   }
+  for (const width of [320, 390]) {
+    await page.setViewportSize({width, height:800});
+    await page.goto(base + '/shop');
+    await page.locator('.header-main').waitFor();
+    assert.equal(await page.locator('.notification-control').count(), 1, 'signed-in header includes the bell');
+    await headerOneRow('signed-in ' + width + 'px');
+  }
+  await page.setViewportSize({width:1440, height:900});
+
+  // Promotion codes are checked one at a time; the customer's data never contains the code list
+  await page.evaluate(() => {
+    const key = 'gearlane_preview_v1', state = JSON.parse(localStorage.getItem(key));
+    state.promotions = [{id:crypto.randomUUID(), code:'SAVE10', kind:'percent', value:10, minimum_cents:0, maximum_uses:5, used_count:0, starts_at:new Date(Date.now() - 864e5).toISOString(), ends_at:new Date(Date.now() + 864e5).toISOString(), active:true}];
+    localStorage.setItem(key, JSON.stringify(state));
+    localStorage.setItem('gearlane_cart', '[]');
+  });
+  await page.goto(base + '/shop');
+  await page.locator('.product-card .add-button').first().click();
+  await page.goto(base + '/checkout');
+  await page.locator('summary', {hasText:'promotion code'}).click();
+  await page.getByLabel('Promotion code', {exact:true}).fill('wrongcode');
+  await page.getByRole('button', {name:'Apply', exact:true}).click();
+  await page.getByText('That promotion code is not valid.').waitFor();
+  assert.equal(await page.getByText('SAVE10').count(), 0, 'a wrong guess never reveals real codes');
+  await page.getByLabel('Promotion code', {exact:true}).fill('save10');
+  await page.getByRole('button', {name:'Apply', exact:true}).click();
+  await page.getByText('Code SAVE10 applied.').waitFor();
+  await page.locator('.totals dt', {hasText:'Promotion'}).waitFor();
+  await page.getByRole('button', {name:'Remove', exact:true}).click();
+  assert.equal(await page.locator('.totals dt', {hasText:'Promotion'}).count(), 0, 'removing the code removes the discount');
   await page.goto(base + '/account');
   await page.getByRole('button', {name:'Sign out', exact:true}).click();
   await page.waitForURL(base + '/');
@@ -105,7 +153,7 @@ try {
     assert.ok(overflow <= 1, 'dashboard overflows horizontally at ' + width + 'px by ' + overflow);
   }
   assert.deepEqual(errors, []);
-  console.log('Design checks passed: pinned header, scrollbar-free navigation, star ratings with highlights, review summary, dashboard widgets and layouts.');
+  console.log('Design checks passed: pinned header, one-row phone header, scrollbar-free navigation, star ratings with highlights, review summary, private promotion-code checking and dashboard widgets and layouts.');
 } finally {
   await browser?.close();
   await server.close();

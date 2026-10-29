@@ -4,19 +4,21 @@ const url=import.meta.env.VITE_SUPABASE_URL,key=import.meta.env.VITE_SUPABASE_PU
 export const preview=import.meta.env.VITE_DEMO_MODE==='true'||(!url&&!key&&import.meta.env.DEV);
 export const configured=Boolean(url&&key);
 export const companyName=import.meta.env.VITE_COMPANY_NAME||'GearLane Auto Parts';
+/* Signed-out visitors may read review text only; identifiers are hidden by the database (supabase/010-privacy-hardening.sql). */
+const REVIEW_PUBLIC_COLUMNS='id,product_id,rating,body,display_name,reply,published,created_at';
 const result=async promise=>{const {data,error}=await promise;if(error)throw error;return data;};
 function createLiveRepository(){
  const supabase=createClient(url,key,{auth:{storage:window.sessionStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},global:{fetch:(input,options={})=>fetch(input,{...options,signal:options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(20000)]):AbortSignal.timeout(20000)})}});
  let onChange=()=>{};
  const coreCache=new Map();
  const invalidate=()=>coreCache.clear();
- const reads=new Set(['record_event','dashboard_stats','staff_directory','manage_conversation','read_notifications','start_conversation','send_message','send_chat_message','toggle_wishlist','chat_inbox','start_support_enquiry']);
+ const reads=new Set(['record_event','dashboard_stats','staff_directory','manage_conversation','read_notifications','start_conversation','send_message','send_chat_message','toggle_wishlist','chat_inbox','start_support_enquiry','check_promotion','admin_get_settings']);
  const rpc=async(name,args={})=>{if(!reads.has(name))invalidate();try{return await result(supabase.rpc(name,args));}finally{if(!reads.has(name))invalidate();}};
  const banners=async(optional=false)=>{const response=await supabase.from('promotion_banners').select('*').order('position').order('created_at',{ascending:false}).limit(100);if(response.error){if(optional)return [];throw response.error;}return response.data;};
  const core=profile=>{
   const cacheKey=(profile?.id||'guest')+':'+(profile?.role||'guest');
   const cached=coreCache.get(cacheKey);if(cached&&cached.until>Date.now())return cached.promise;
-  const queries={products:supabase.from('products').select('*').order('name'),settings:supabase.from('store_settings').select('*').eq('id',1).single(),announcements:supabase.from('announcements').select('*').order('created_at',{ascending:false}),promotions:supabase.from('promotions').select('*'),reviews:supabase.from('reviews').select('*').order('created_at',{ascending:false}).limit(500)};
+  const queries={products:supabase.from('products').select('*').order('name'),settings:profile?.role==='admin'?supabase.rpc('admin_get_settings'):supabase.from('public_store_settings').select('*').eq('id',1).single(),announcements:supabase.from('announcements').select('*').order('created_at',{ascending:false}),promotions:profile?.role==='admin'?supabase.from('promotions').select('*'):Promise.resolve({data:[],error:null}),reviews:supabase.from('reviews').select(profile?'*':REVIEW_PUBLIC_COLUMNS).order('created_at',{ascending:false}).limit(500)};
   const promise=Promise.all([...Object.entries(queries).map(async([name,query])=>[name,await result(query)]),banners(true).then(rows=>['banners',rows])]).then(Object.fromEntries).catch(error=>{if(coreCache.get(cacheKey)?.promise===promise)coreCache.delete(cacheKey);throw error;});
   coreCache.set(cacheKey,{promise,until:Date.now()+15000});return promise;
  };

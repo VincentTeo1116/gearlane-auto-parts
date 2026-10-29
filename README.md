@@ -115,6 +115,8 @@ For an existing project, also review and run `supabase/007-chat-delivery.sql` be
 
 For conversation history and named enquiries, review and run `supabase/009-chat-inbox.sql` on the existing project. It preserves messages, allows separate open enquiries, adds a role-checked inbox summary (latest message, activity and unread counts), and adds duplicate-safe enquiry creation. Fresh-project `setup.sql` includes it. The new topic form needs this migration; existing chat can still load without it. Do not rerun the full setup on an initialized project.
 
+For existing projects, review and run `supabase/010-privacy-hardening.sql` once, **before** deploying this version of the app. It stops signed-out visitors from reading the store's bank details, hides the promotion-code list, and hides reviewer identifiers from signed-out visitors. It is safe to run twice and does not change business data. A new project gets it through `setup.sql`. Deploy the app after running it: the app reads settings through the new `public_store_settings` view and checks promotion codes with `check_promotion`, so the old app and the new database (or the reverse) will not work together.
+
 For existing projects adding homepage advertisements, review and run `supabase/008-promotion-banners.sql` once. It creates banner records, admin-only write functions, a public image bucket with admin-only uploads, and realtime updates. Fresh-project `setup.sql` includes migration 008. Do not rerun the complete setup on an existing project. No extra environment variables or service-role key are needed for banner management.
 
 1. Create your own customer account at `/account` and complete email confirmation if enabled.

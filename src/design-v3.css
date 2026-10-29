@@ -264,3 +264,37 @@ body:has(.workspace) .preview-banner { position: sticky; top: 0; z-index: 90; }
   .workspace-sidebar { z-index: 100; }
   .workspace-backdrop { z-index: 95; }
 }
+
+/* ======================================================================
+   Phone header: logo + name, cart and menu share ONE row; search sits below.
+   A grid (not flex-wrap) so the icons can never be pushed onto a second line.
+   ====================================================================== */
+@media (max-width: 760px) {
+  .header-main { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand icons" "search search"; align-items: center; gap: 10px 8px; height: auto; padding: 10px 0 12px; }
+  .header-main > .brand { grid-area: brand; min-width: 0; }
+  .header-main > .header-search { grid-area: search; order: 0; margin: 0; }
+  .header-main > .header-icons { grid-area: icons; margin: 0; gap: 2px; }
+
+  /* Name never wraps; it truncates instead of pushing the icons away */
+  .brand { gap: 9px; min-width: 0; }
+  .brand > span:last-child { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; line-height: 1.2; }
+  .brand small { display: block; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: .6px; font-size: .6875rem; }
+  .brand small > span { display: inline; }
+  .brand-mark { flex: 0 0 auto; width: 36px; height: 38px; font-size: 24px; }
+
+  /* Cart is an icon with a badge; the word "Cart" stays in the accessible name */
+  .header-cart { position: relative; padding: 0 !important; width: 44px; min-height: 44px; justify-content: center; gap: 0; border: 0 !important; }
+  .header-cart > span { font-size: 0; }
+  .header-cart b { position: absolute; top: 3px; right: 1px; min-width: 19px; height: 19px; padding: 0 5px; margin: 0; border-radius: 99px; font-size: .75rem; line-height: 19px; text-align: center; display: block; }
+  .header-icons > .icon-link, .header-icons > .notification-control { width: 44px; min-height: 44px; display: grid; place-items: center; position: relative; }
+  .mobile-menu { width: 44px; height: 44px; min-width: 44px; padding: 0; display: grid; place-items: center; }
+
+  .header-search { height: 46px; padding: 3px 3px 3px 12px; }
+  .header-search input { min-height: 38px; padding: 0; font-size: 16px; }
+  .header-search button[type=submit] { min-height: 38px; padding: 0 14px; }
+}
+@media (max-width: 420px) {
+  .brand small > span + span { display: none; }   /* "PARTS. SUPPORT." only, so the line is never cut mid-word */
+  .brand { gap: 7px; }
+  .brand > span:last-child { font-size: .9375rem; }
+}

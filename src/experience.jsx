@@ -3,7 +3,7 @@ import {ArrowRight, ArrowLeft, Search, ShoppingBag, Package, Heart, MessageCircl
 import {useApp, useTask} from './context.jsx';
 import {CustomerHome,CatalogueSearch} from './customer-design.jsx';
 import {Button, Link, Modal, ProductArt, Notice, Field, Empty} from './components.jsx';
-import {money, addressSchema, validate, calculateCart, STATES} from './domain.mjs';
+import {money, addressSchema, validate, calculateCart, friendlyError, STATES} from './domain.mjs';
 
 export function StoreChrome() {
   const {data, profile, route, go, cart, setDialog} = useApp();
@@ -77,11 +77,14 @@ export function GuidedCheckout({Totals}) {
   const [stage, setStage] = useState('delivery');
   const [address, setAddress] = useState({name:profile.full_name,phone:profile.phone,line1:'',city:'',postcode:'',state:'Selangor'});
   const [code, setCode] = useState(''), [applied, setApplied] = useState(''), [accepted, setAccepted] = useState(false);
+  const [promo, setPromo] = useState(null), [promoBusy, setPromoBusy] = useState(false), [promoError, setPromoError] = useState('');
   const heading = useRef(null), idempotency = useRef(null);
   useEffect(() => {track('checkout_started');try {idempotency.current = sessionStorage.getItem('gearlane_checkout_key') || crypto.randomUUID();sessionStorage.setItem('gearlane_checkout_key',idempotency.current);}catch {idempotency.current=crypto.randomUUID();}}, []);
-  const promo = applied ? data.promotions.find(p => p.code === applied) : null;
+  // Codes are checked one at a time on the server; customers can no longer download the list of codes.
+  const applyCode = async () => {const value = code.trim();setPromoError('');if(!value){setApplied('');setPromo(null);return;}setPromoBusy(true);try {const row = await repository.rpc('check_promotion',{p_code:value});setPromo(row);setApplied(row.code);}catch(e) {setPromo(null);setApplied('');setPromoError(friendlyError(e));}finally {setPromoBusy(false);}};
+  const removeCode = () => {setCode('');setApplied('');setPromo(null);setPromoError('');};
   let totals, error;
-  try {if(applied && !promo) throw new Error('Promotion unavailable.');totals=calculateCart(cart,data.products,data.settings,promo);}catch(e) {error=e.message;}
+  try {totals=calculateCart(cart,data.products,data.settings,promo);}catch(e) {error=e.message;}
   const changeStage = next => {setStage(next);task.setError('');requestAnimationFrame(() => {heading.current?.focus();heading.current?.scrollIntoView({block:'start'});});};
   const submit = async e => {
     e.preventDefault();
@@ -100,7 +103,7 @@ export function GuidedCheckout({Totals}) {
         </>}
       </section>
       {totals ? <button type="button" className="checkout-total-bar" onClick={() => document.getElementById('order-summary')?.scrollIntoView({behavior:'smooth',block:'start'})}><span>Order total</span><b>{money(totals.total_cents)}</b><em>View summary</em></button> : null}
-      <aside id="order-summary" className="panel order-summary"><div className="panel-heading"><h2>Your order</h2><Link to="/cart" go={go} className="text-link">Edit cart</Link></div><div className="checkout-items">{cart.map(i => {const p=data.products.find(p=>p.id===i.product_id);return <div key={i.product_id}><span><b>{i.quantity} ×</b> {p?.name || 'Unavailable item'}</span><b>{p ? money(i.quantity*p.price_cents) : '—'}</b></div>;})}</div><details className="promotion-disclosure"><summary>Have a promotion code?</summary><div className="coupon-row"><input aria-label="Promotion code" maxLength={30} placeholder="Enter code" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();setApplied(code.trim());task.setError('');}}}/><Button type="button" variant="secondary small" onClick={()=>{setApplied(code.trim());task.setError('');}}>Apply</Button>{applied ? <Button type="button" variant="secondary small" onClick={()=>{setCode('');setApplied('');}}>Remove</Button> : null}</div></details>{error ? <Notice type="error">{error}</Notice> : <Totals totals={totals}/>}<p className="summary-assurance"><ShieldCheck size={16}/>Full total shown before ordering</p>{!data.settings.checkout_enabled ? <Notice>Checkout is being configured. Contact the seller for help.</Notice> : null}{stage === 'review' ? <>{task.error ? <Notice type="error">{task.error}</Notice> : null}<Button type="submit" className="full-width" busy={task.busy} disabled={Boolean(error)||!data.settings.checkout_enabled}>Place order <ArrowRight size={18}/></Button><p className="muted">Next: bank details and transfer instructions.</p></> : <p className="muted">Next: review your address and confirm the order.</p>}</aside>
+      <aside id="order-summary" className="panel order-summary"><div className="panel-heading"><h2>Your order</h2><Link to="/cart" go={go} className="text-link">Edit cart</Link></div><div className="checkout-items">{cart.map(i => {const p=data.products.find(p=>p.id===i.product_id);return <div key={i.product_id}><span><b>{i.quantity} ×</b> {p?.name || 'Unavailable item'}</span><b>{p ? money(i.quantity*p.price_cents) : '—'}</b></div>;})}</div><details className="promotion-disclosure"><summary>Have a promotion code?</summary><div className="coupon-row"><input aria-label="Promotion code" maxLength={30} placeholder="Enter code" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();applyCode();}}}/><Button type="button" variant="secondary small" busy={promoBusy} onClick={applyCode}>Apply</Button>{applied ? <Button type="button" variant="secondary small" onClick={removeCode}>Remove</Button> : null}</div>{promoError ? <Notice type="error">{promoError}</Notice> : applied ? <Notice>Code {applied} applied.</Notice> : null}</details>{error ? <Notice type="error">{error}</Notice> : <Totals totals={totals}/>}<p className="summary-assurance"><ShieldCheck size={16}/>Full total shown before ordering</p>{!data.settings.checkout_enabled ? <Notice>Checkout is being configured. Contact the seller for help.</Notice> : null}{stage === 'review' ? <>{task.error ? <Notice type="error">{task.error}</Notice> : null}<Button type="submit" className="full-width" busy={task.busy} disabled={Boolean(error)||!data.settings.checkout_enabled}>Place order <ArrowRight size={18}/></Button><p className="muted">Next: bank details and transfer instructions.</p></> : <p className="muted">Next: review your address and confirm the order.</p>}</aside>
     </form>
   </main>;
 }
