@@ -24,7 +24,7 @@ export function StoreChrome() {
         <div className="header-icons">
           {profile ? <button className="icon-link notification-control" aria-label="Notifications" onClick={() => setDialog({type: 'notifications'})}><Bell size={22}/>{unread ? <small>{unread}</small> : null}</button> : null}
           <Link to="/account" go={go} className="account-link"><User size={22}/><span>{profile ? profile.full_name.split(' ')[0] : 'Sign in'}<small>{profile ? 'Your account' : 'or create an account'}</small></span></Link>
-          <Link to="/cart" go={go} className="header-cart" aria-label={'Cart, ' + count + ' items'}><ShoppingBag size={22}/><span>Cart <b>{count}</b></span></Link>
+          <Link to="/cart" go={go} className="header-cart" aria-label={'Cart, ' + count + ' items'}><ShoppingBag size={22}/><span>Cart <b key={count} className="count-pop">{count}</b></span></Link>
           <button className="icon-button mobile-menu" aria-label="Toggle navigation" aria-expanded={menu} aria-controls="store-primary-navigation" onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</button>
         </div>
       </div>

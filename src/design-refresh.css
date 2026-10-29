@@ -59,13 +59,95 @@
 .filter-heading b { font-size: 1.0625rem; color: var(--ink); }
 .filter-heading .text-button { white-space: nowrap; color: var(--ring); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 
-/* ---------- Support chat button: stay out of the way of content ---------- */
-.support-fab { box-shadow: 0 8px 24px #0e22333d; }
-.support-fab:hover { transform: translateY(-2px); }
-.customer-page-root { padding-bottom: 72px; }          /* room so the floating button never hides the last row */
+/* ---------- Support chat button: expands at the top of the page, shrinks to an icon while browsing ---------- */
+.support-fab { box-shadow: 0 8px 24px #0e22333d; overflow: hidden; }
+.support-fab:hover, .support-fab:focus-visible { transform: translateY(-2px); }
+.support-fab > span { display: inline-block; max-width: 220px; white-space: nowrap; overflow: hidden; transition: max-width .25s var(--ease), opacity .2s; }
+.support-fab.compact { padding: 14px; gap: 0; }
+.support-fab.compact > span { max-width: 0; opacity: 0; }
+.support-fab.compact:hover, .support-fab.compact:focus-visible { padding: 13px 18px; gap: 9px; }
+.support-fab.compact:hover > span, .support-fab.compact:focus-visible > span { max-width: 220px; opacity: 1; }
+.support-fab::before { content: ""; position: absolute; top: 9px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #5fd08a; box-shadow: 0 0 0 2px #203f54; }
+.customer-page-root { padding-bottom: 72px; }
 @media (max-width: 760px) {
-  .support-fab { min-width: 48px; min-height: 48px; }  /* touch target */
+  .support-fab { min-width: 48px; min-height: 48px; }
+  .support-fab > span { display: none; }
 }
+
+/* ---------- Homepage: find-a-part search in the hero ---------- */
+.hero-finder { margin: 0 0 20px; max-width: 440px; }
+.hero-finder form { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 12px; padding: 5px 5px 5px 14px; box-shadow: 0 10px 28px #06121d40; }
+.hero-finder form:focus-within { outline: 3px solid #f1b37c; outline-offset: 2px; }
+.hero-finder svg { color: #5d7686; }
+.hero-finder input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 10px 4px; outline: none; font-size: 1rem; color: var(--ink); }
+.hero-finder button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: #f0b580; color: #20394b; font-weight: 750; border-radius: 9px; padding: 11px 16px; min-height: 44px; }
+.hero-finder button:hover { background: #f5c698; }
+.quick-picks { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 12px; font-size: .875rem; color: #b2c9d7; }
+.quick-picks a { color: #e6f0f6; border: 1px solid #ffffff38; background: #ffffff14; border-radius: 999px; padding: 6px 12px; transition: background .15s, transform .12s; }
+.quick-picks a:hover { background: #ffffff30; transform: translateY(-1px); }
+.quick-picks a:focus-visible { outline-color: #f1b37c; }
+.showcase-copy > p { margin-bottom: 18px; }
+
+/* ---------- Homepage: choose what to show ---------- */
+.home-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 20px; }
+.home-tabs button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid #cfdae2; background: #fff; border-radius: 999px; color: var(--ink-soft); font-weight: 650; transition: background .15s, border-color .15s, color .15s; }
+.home-tabs button:hover:not(.selected) { background: var(--surface-soft); border-color: #a9bccb; }
+.home-tabs button.selected { background: var(--ink); border-color: var(--ink); color: #fff; }
+.home-tabs button span { font-size: .8125rem; padding: 1px 8px; border-radius: 999px; background: #e8eef3; color: var(--ink-soft); }
+.home-tabs button.selected span { background: #ffffff2e; color: #fff; }
+.home-more { display: flex; justify-content: center; margin-top: 26px; }
+.home-empty { padding: 28px 0; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.home-products .product-card { animation: rise .35s var(--ease) both; }
+.home-products .product-card:nth-child(2) { animation-delay: .04s; } .home-products .product-card:nth-child(3) { animation-delay: .08s; } .home-products .product-card:nth-child(4) { animation-delay: .12s; }
+.home-products .product-card:nth-child(n+5) { animation-delay: .16s; }
+
+/* ---------- Stock status: said in words, with a colour cue ---------- */
+.stock-line { display: flex; align-items: center; gap: 7px; font-size: .875rem; font-weight: 700; margin: -4px 0 12px; }
+.stock-line i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.stock-line.in { color: #2b6a3c; }
+.stock-line.low { color: #8a5a07; }
+.stock-line.out { color: #8a2f28; }
+.stock-line.check { color: #4d5f69; }
+.stock-line.low i { animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px #8a5a0722; } }
+
+/* ---------- Catalogue toolbar: quick stock toggle + grid/list switch ---------- */
+.catalogue-toolbar { flex-wrap: wrap; }
+.catalogue-toolbar .showing { margin-right: auto; }
+.quick-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid #cfdae2; background: #fff; border-radius: 999px; font-weight: 650; color: var(--ink-soft); transition: background .15s, border-color .15s; }
+.quick-toggle i { width: 28px; height: 16px; border-radius: 999px; background: #c5d1d9; position: relative; transition: background .2s; }
+.quick-toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .2s var(--ease); }
+.quick-toggle[aria-pressed=true] { border-color: #2b6a3c; background: #eef7f0; color: #1f5230; }
+.quick-toggle[aria-pressed=true] i { background: #2b6a3c; }
+.quick-toggle[aria-pressed=true] i::after { transform: translateX(12px); }
+.view-toggle { display: inline-flex; border: 1px solid #cfdae2; border-radius: 10px; overflow: hidden; background: #fff; }
+.view-toggle button { display: grid; place-items: center; width: 44px; height: 44px; border: 0; background: transparent; color: var(--ink-soft); }
+.view-toggle button[aria-pressed=true] { background: var(--ink); color: #fff; }
+@media (max-width: 760px) {
+  .catalogue-toolbar { display: flex; }
+  .catalogue-toolbar .showing { flex-basis: 100%; order: 5; font-size: .875rem; margin-top: 2px; }
+  .catalogue-toolbar > select { flex: 1 1 100%; max-width: none; order: 4; }
+  .quick-toggle { flex: 1; justify-content: center; }
+}
+
+/* List layout: more detail per row, easier to compare */
+.catalogue-grid.as-list { grid-template-columns: 1fr !important; gap: 12px; }
+.catalogue-grid.as-list .product-card { display: grid; grid-template-columns: 190px minmax(0, 1fr); }
+.catalogue-grid.as-list .product-card-media .product-art { height: 100%; min-height: 170px; }
+.catalogue-grid.as-list .product-card-body { padding: 16px 18px; }
+.catalogue-grid.as-list .product-card-foot { grid-template-columns: 1fr auto; align-items: center; margin-top: auto; }
+.catalogue-grid.as-list .add-button { min-width: 170px; }
+@media (max-width: 560px) {
+  .catalogue-grid.as-list .product-card { grid-template-columns: 112px minmax(0, 1fr); }
+  .catalogue-grid.as-list .product-card-media .product-art { min-height: 0; height: 100%; }
+  .catalogue-grid.as-list .product-card-foot { grid-template-columns: 1fr; }
+  .catalogue-grid.as-list .add-button { min-width: 0; }
+}
+
+/* ---------- Cart badge acknowledges an add ---------- */
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.4); } 100% { transform: scale(1); } }
+.count-pop { animation: pop .35s var(--ease); }
 
 /* ---------- Forms: larger touch targets, clearer errors ---------- */
 input, select, textarea { min-height: 44px; }
@@ -100,7 +182,7 @@ tbody tr:hover { background: #f6f9fb; }
 /* ---------- Motion + contrast preferences ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
-  .product-card:hover, .support-fab:hover { transform: none; }
+  .product-card:hover, .support-fab:hover, .quick-picks a:hover { transform: none; }
 }
 @media (forced-colors: active) {
   .button, .add-button, .category-chips button, .product-card { border: 1px solid CanvasText; }
@@ -108,4 +190,11 @@ tbody tr:hover { background: #f6f9fb; }
 }
 @media print {
   .support-fab, .preview-banner, .skip-link, .workspace-sidebar { display: none !important; }
+}
+
+/* Phones already show the header search directly above the hero, so keep only the shortcuts there */
+@media (max-width: 760px) {
+  .hero-finder form { display: none; }
+  .hero-finder { margin-bottom: 14px; }
+  .quick-picks { margin-top: 0; }
 }
