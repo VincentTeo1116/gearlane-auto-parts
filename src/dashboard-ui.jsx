@@ -1,7 +1,8 @@
-import React,{useMemo,useState} from 'react';
+import React,{useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {ArrowRight} from 'lucide-react';
 import {Link} from './components.jsx';
 import {money} from './domain.mjs';
+import {tickEvery} from './chart-data.mjs';
 
 /* Categorical palette: distinguishable in light mode and for most colour-vision types; always paired with text labels */
 export const CHART_COLORS=['#2f6fa3','#e8782a','#1f9d8a','#7a5bd6','#d6457a','#8a9a2b'];
@@ -19,20 +20,35 @@ export function compactMoney(cents){
   return 'RM '+Math.round(v);
 }
 
-/* Bars with y-axis, grid lines and an average line. Keeps the same accessible button-per-bar behaviour. */
+/* Sales (or activity) bars with a readable axis. Every bar is a button; each carries its own tooltip text.
+   The date labels are sized in real pixels and thinned to fit the measured width, so they never touch or shrink. */
 export function TrendChart({series,metric,selected,onSelect,label}){
   const isMoney=metric==='daily',peak=Math.max(0,...series.map(s=>s.value)),top=niceMax(peak);
   const ticks=[0,.25,.5,.75,1].map(f=>f*top),avg=series.length?series.reduce((a,s)=>a+s.value,0)/series.length:0;
   const fmt=v=>isMoney?compactMoney(v):String(Math.round(v));
-  const every=series.length>40?7:series.length>14?3:series.length>10?2:1;
-  return <div className="trend-chart">
+  const plot=useRef(null),[width,setWidth]=useState(640);
+  useLayoutEffect(()=>{
+    const el=plot.current;if(!el)return undefined;
+    const measure=()=>setWidth(el.clientWidth||640);measure();
+    if(typeof ResizeObserver==='undefined')return undefined;
+    const observer=new ResizeObserver(measure);observer.observe(el);return()=>observer.disconnect();
+  },[]);
+  const longest=Math.max(1,...series.map(s=>s.axis.length)),step=tickEvery(series.length,width,longest*7.6+24);
+  const labelled=i=>(series.length-1-i)%step===0;
+  // a label is centred under its bar, but nudged inward so it never hangs past either end of the plot
+  const place=i=>{const half=(series[i].axis.length*7.6+4)/2,center=(i+.5)/series.length*width;return Math.min(width-half,Math.max(half,center));};
+  return <div className={'trend-chart'+(series.length>45?' dense':'')}>
     <div className="y-axis" aria-hidden="true">{[...ticks].reverse().map(t=><span key={t}>{fmt(t)}</span>)}</div>
-    <div className="plot">
-      <div className="gridlines" aria-hidden="true">{ticks.map(t=><i key={t} style={{bottom:(t/top*100)+'%'}}/>)}</div>
-      {avg>0?<div className="avg-line" aria-hidden="true" style={{bottom:(avg/top*100)+'%'}}><span>avg {fmt(avg)}</span></div>:null}
-      <div className="bar-chart" aria-label={label}>
-        {series.map((s,i)=><button type="button" key={s.name} className={(selected?.name===s.name?'selected ':'')+(s.value===peak&&peak>0?'peak':'')} aria-label={s.name+': '+(isMoney?money(s.value):s.value+' events')} title={s.name+' · '+(isMoney?money(s.value):s.value)} onClick={()=>onSelect(s)}><span style={{height:(s.value/top*100)+'%'}}/><small>{i%every===0?s.name.slice(isMoney?5:0):''}</small></button>)}
+    <div className="plot-column">
+      <div className="plot" ref={plot}>
+        <div className="gridlines" aria-hidden="true">{ticks.map(t=><i key={t} style={{bottom:(t/top*100)+'%'}}/>)}</div>
+        {avg>0?<div className="avg-line" aria-hidden="true" style={{bottom:(avg/top*100)+'%'}}/>:null}
+        <div className="bar-chart" aria-label={label}>
+          {series.map(s=>{const text=s.label+' · '+(isMoney?money(s.value):s.value+(s.value===1?' event':' events'));return <button type="button" key={s.name} data-tip={text} style={{'--bar':(s.value/top*100)+'%'}} className={(selected?.name===s.name?'selected ':'')+(s.value===peak&&peak>0?'peak ':'')+(s.value===0?'zero':'')} aria-label={s.label+': '+(isMoney?money(s.value):s.value+' events')} onClick={()=>onSelect(s)}><span/></button>;})}
+        </div>
       </div>
+      <div className="x-axis" aria-hidden="true">{series.map((s,i)=>labelled(i)?<span key={s.name} className="x-tick" style={{left:place(i)+'px'}}>{s.axis}</span>:null)}</div>
+      {avg>0?<p className="chart-legend"><i aria-hidden="true"/>Dashed line: average {fmt(avg)} per {isMoney?(series.length>45?'week':'day'):'hour'}</p>:null}
     </div>
   </div>;
 }

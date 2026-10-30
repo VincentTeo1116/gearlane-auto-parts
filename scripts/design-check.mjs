@@ -25,6 +25,14 @@ try {
     return style.scrollbarWidth === 'none' || el.offsetHeight === el.clientHeight && el.offsetWidth === el.clientWidth;
   }), selector);
 
+  // The sample-data announcement is for staff and never reaches shoppers; real announcements still do
+  await page.goto(base + '/shop');
+  await page.locator('.product-card').first().waitFor();
+  await page.evaluate(() => {const key = 'gearlane_preview_v1', s = JSON.parse(localStorage.getItem(key));const now = new Date().toISOString();s.announcements.push({id:'31000000-0000-4000-8000-000000000001', title:'Testing data enabled', body:'This test store includes fictional customer orders.', active:true, created_at:now}, {id:crypto.randomUUID(), title:'Workshop hours this week', body:'We close early on Friday.', active:true, created_at:now});localStorage.setItem(key, JSON.stringify(s));});
+  await page.goto(base + '/');
+  await page.getByText('Workshop hours this week').waitFor();
+  assert.equal(await page.getByText('Testing data enabled').count(), 0, 'the sample-data announcement is hidden from shoppers');
+
   // Storefront header: sticky, no scrollbar in navigation, accent search button
   await page.goto(base + '/shop');
   await page.locator('#page-main').waitFor();
@@ -135,12 +143,38 @@ try {
   // Admin dashboard: widgets exist, are interactive and nothing overflows
   await login('admin');
   await page.locator('.kpi-grid').waitFor();
+  assert.equal(await page.getByText(/testing database includes fictional/i).count(), 0, 'no "testing database" banner on the dashboard');
   for (const selector of ['.hero-stat', '.action-center', '.trend-chart', '.pipeline', '.donut', '.top-products']) await page.locator(selector).first().waitFor();
   assert.ok(await page.locator('.pipeline-row').count() >= 5, 'pipeline stages');
   assert.ok(await page.locator('.donut-legend li').count() >= 2, 'donut legend');
   assert.ok(await page.locator('.top-products li').count() >= 1, 'top products');
   await page.locator('.trend-chart .bar-chart button').nth(3).click();
   assert.match(await page.locator('.chart-readout').textContent(), /RM/);
+  // The sales chart: every day on the axis, bars across the full width, readable non-overlapping date labels
+  const chartGeometry = () => page.evaluate(() => {
+    const plot = document.querySelector('.trend-chart .plot').getBoundingClientRect();
+    const bars = [...document.querySelectorAll('.trend-chart .bar-chart button')].map(b => b.getBoundingClientRect());
+    const ticks = [...document.querySelectorAll('.trend-chart .x-tick')].map(t => {const r = t.getBoundingClientRect();return {left:r.left, right:r.right, size:parseFloat(getComputedStyle(t).fontSize), text:t.textContent};});
+    const baseline = [...document.querySelectorAll('.trend-chart .bar-chart button:not(.zero) > span')].map(b => Math.round(plot.bottom - b.getBoundingClientRect().bottom));
+    return {plot:{left:plot.left, right:plot.right, width:plot.width}, count:bars.length, first:bars[0].left, last:bars.at(-1).right, ticks, baseline};
+  });
+  for (const [period, expected] of [['7', 7], ['30', 30], ['90', 13]]) {
+    await page.getByLabel('Analytics period', {exact:true}).selectOption(period);
+    await page.locator('.trend-chart .bar-chart button').nth(expected - 1).waitFor();
+    const g = await chartGeometry();
+    assert.equal(g.count, expected, period + ' days: bar count (90 days is shown as weekly bars)');
+    assert.ok(g.first - g.plot.left < 6 && g.plot.right - g.last < 6, period + ' days: bars span the whole plot, not a corner of it ' + JSON.stringify([g.first, g.last, g.plot]));
+    assert.ok(g.plot.width / g.count >= 5, period + ' days: bars are wide enough to see');
+    assert.ok(g.ticks.length >= 2, period + ' days: the axis has date labels');
+    for (const tick of g.ticks) assert.ok(tick.size >= 12.4, period + ' days: label "' + tick.text + '" is ' + tick.size + 'px, too small to read');
+    const sorted = [...g.ticks].sort((a, b) => a.left - b.left);
+    sorted.slice(1).forEach((tick, i) => assert.ok(tick.left >= sorted[i].right + 6, period + ' days: labels "' + sorted[i].text + '" and "' + tick.text + '" touch'));
+    assert.ok(sorted.at(-1).right <= g.plot.right + 6 && sorted[0].left >= g.plot.left - 40, period + ' days: labels stay inside the chart');
+    assert.ok(g.baseline.every(b => b <= 1), period + ' days: every bar stands on the baseline, none floats');
+  }
+  await page.getByLabel('Analytics period', {exact:true}).selectOption('30');
+  await page.locator('.trend-chart .bar-chart button').nth(3).hover();
+  assert.match(await page.locator('.trend-chart .bar-chart button').nth(3).evaluate(el => el.dataset.tip), /^\w{3} \d+ \w{3} · RM/, 'each bar carries its date and amount');
   await page.getByRole('button', {name:'Active hours', exact:true}).click();
   await page.locator('.trend-chart .bar-chart button').first().click();
   await page.getByLabel('Analytics period', {exact:true}).selectOption('7');
@@ -149,6 +183,11 @@ try {
   for (const width of [390, 768, 1024, 1440]) {
     await page.setViewportSize({width, height: width < 760 ? 844 : 900});
     await page.waitForTimeout(250);
+    const narrow = await chartGeometry();
+    for (const tick of narrow.ticks) assert.ok(tick.size >= 12, width + 'px: chart label "' + tick.text + '" is ' + tick.size + 'px');
+    const order = [...narrow.ticks].sort((a, b) => a.left - b.left);
+    order.slice(1).forEach((tick, i) => assert.ok(tick.left >= order[i].right + 4, width + 'px: chart labels "' + order[i].text + '" and "' + tick.text + '" touch'));
+    assert.ok(order.at(-1).right <= narrow.plot.right + 6, width + 'px: the last chart label stays inside the chart');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     assert.ok(overflow <= 1, 'dashboard overflows horizontally at ' + width + 'px by ' + overflow);
   }

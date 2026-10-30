@@ -1,0 +1,45 @@
+/* Design refresh v7: the sales / activity chart on the admin overview.
+   Replaces the earlier chart layout: that one collapsed to a sliver inside the revenue card. */
+
+.trend-chart { --plot-h: 270px; display: grid !important; grid-template-columns: 60px minmax(0, 1fr); gap: 10px; margin: 12px 0 6px; align-items: start; }
+.hero-stat > .trend-chart { display: grid !important; }      /* beats ".stat-card > div { display:flex }", which squeezed the plot to the right edge */
+
+.trend-chart .y-axis { display: flex; flex-direction: column; justify-content: space-between; height: var(--plot-h); text-align: right; font-size: .8125rem; font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums; line-height: 1; transform: translateY(-.5em); height: calc(var(--plot-h) + 1em); }
+.plot-column { min-width: 0; }
+.trend-chart .plot { position: relative; height: var(--plot-h); margin: 0; }
+.gridlines i { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed #d9e3ea; }
+.gridlines i:first-child { border-top: 1px solid #b9c8d3; }
+
+/* Date labels: real 13px text, spaced by the component so they never overlap */
+.x-axis { position: relative; height: 30px; margin-top: 10px; }
+.x-tick { position: absolute; top: 0; transform: translateX(-50%); font-size: .8125rem; font-weight: 600; color: var(--ink-soft); white-space: nowrap; line-height: 1.2; }
+
+.trend-chart .bar-chart { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 4px; padding: 0; overflow: visible; }
+.trend-chart.dense .bar-chart { gap: 3px; }
+.trend-chart .bar-chart button { position: relative; flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; background: none; border: 0; padding: 0; border-radius: 6px; }
+.trend-chart .bar-chart button > span { display: block; width: 100%; max-width: 46px; height: var(--bar); min-height: 5px; border-radius: 7px 7px 2px 2px; background: linear-gradient(180deg, #4a8cc0, #2f6fa3); transition: filter .15s, transform .15s; transform-origin: bottom; }
+.trend-chart.dense .bar-chart button > span { border-radius: 4px 4px 1px 1px; }
+.trend-chart .bar-chart button.zero > span { height: 3px; min-height: 3px; background: #cfdbe4; border-radius: 2px; }
+.trend-chart .bar-chart button.peak:not(.selected) > span { background: linear-gradient(180deg, #2f6fa3, #1d4f7a); }
+.trend-chart .bar-chart button.selected > span { background: linear-gradient(180deg, #f08a3e, #c2410c); }
+.trend-chart .bar-chart button:hover > span { filter: brightness(1.12); transform: scaleX(1.08); }
+.trend-chart .bar-chart button:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+
+/* Tooltip above the bar: date and amount, on hover, keyboard focus or selection */
+.trend-chart .bar-chart button::after { content: attr(data-tip); position: absolute; bottom: calc(var(--bar) + 12px); left: 50%; transform: translateX(-50%); z-index: 4; padding: 7px 11px; border-radius: 9px; background: var(--ink); color: #fff; font-size: .8125rem; font-weight: 650; line-height: 1.25; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .12s; box-shadow: 0 6px 18px #0b1e2c40; }
+.trend-chart .bar-chart button:hover::after, .trend-chart .bar-chart button:focus-visible::after, .trend-chart .bar-chart button.selected::after { opacity: 1; }
+.trend-chart .bar-chart button:nth-child(-n+3)::after { left: 0; transform: none; }
+.trend-chart .bar-chart button:nth-last-child(-n+3)::after { left: auto; right: 0; transform: none; }
+.trend-chart .bar-chart button:hover { z-index: 5; }
+
+/* Average: a dashed line across the plot, explained once in a legend below (a label on the line would cover the bars) */
+.avg-line { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed #e8782a; z-index: 1; pointer-events: none; }
+.chart-legend { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; font-size: .8125rem; font-weight: 600; color: var(--ink-soft); }
+.chart-legend i { width: 22px; height: 0; border-top: 2px dashed #e8782a; }
+
+@media (max-width: 760px) {
+  .trend-chart { --plot-h: 220px; grid-template-columns: 50px minmax(0, 1fr); gap: 8px; }
+  .trend-chart .y-axis { font-size: .75rem; }
+  .x-tick { font-size: .78125rem; }       /* 12.5px: still comfortably readable */
+}
+@media (prefers-reduced-motion: reduce) { .trend-chart .bar-chart button > span { transition: none; } }
