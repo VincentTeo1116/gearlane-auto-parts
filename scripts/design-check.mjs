@@ -135,7 +135,7 @@ try {
   // Admin dashboard: widgets exist, are interactive and nothing overflows
   await login('admin');
   await page.locator('.kpi-grid').waitFor();
-  for (const selector of ['.work-queue', '.trend-chart', '.pipeline', '.donut', '.top-products']) await page.locator(selector).first().waitFor();
+  for (const selector of ['.hero-stat', '.action-center', '.trend-chart', '.pipeline', '.donut', '.top-products']) await page.locator(selector).first().waitFor();
   assert.ok(await page.locator('.pipeline-row').count() >= 5, 'pipeline stages');
   assert.ok(await page.locator('.donut-legend li').count() >= 2, 'donut legend');
   assert.ok(await page.locator('.top-products li').count() >= 1, 'top products');

@@ -2,23 +2,22 @@ import React,{useEffect,useMemo,useState} from 'react';
 import {Bell,Car,Check,TriangleAlert,X} from 'lucide-react';
 import {useApp} from './context.jsx';
 import {friendlyError} from './domain.mjs';
-import {fitStatus,formatYears,parseVehicle,serialiseVehicle,vehicleLabel,vehicleOptions} from './fitment.mjs';
+import {fitStatus,formatYears,vehicleLabel,vehicleOptions} from './fitment.mjs';
+import {useVehicle} from './vehicle-state.jsx';
 
-const STORAGE_KEY='gearlane_vehicle';
-export const loadVehicle=()=>{try{return parseVehicle(localStorage.getItem(STORAGE_KEY));}catch{return null;}};
-export const saveVehicle=vehicle=>{try{if(vehicle)localStorage.setItem(STORAGE_KEY,serialiseVehicle(vehicle));else localStorage.removeItem(STORAGE_KEY);}catch{/* private mode: the picker still works for this visit */}};
+export{loadVehicle,saveVehicle}from './vehicle-state.jsx';
 
 /* "My vehicle" bar on the shop page. Options come only from fitment the store has listed;
    with no fitment entered yet it renders nothing rather than an empty control. */
-export function VehiclePicker({vehicle,onChange,counts}){
+export function VehiclePicker({vehicle,onChange,counts,onShowAll}){
   const {data}=useApp(),fitment=data.fitment||[],options=useMemo(()=>vehicleOptions(fitment),[fitment]);
-  const [saved]=useState(loadVehicle);
+  const {local:saved,setVehicle}=useVehicle();
   /* A make on its own is not yet a vehicle: keep it as a draft until a model is chosen, then apply it. */
   const [draft,setDraft]=useState(vehicle);
   useEffect(()=>{setDraft(vehicle);},[vehicle?.make,vehicle?.model,vehicle?.year]);
   if(!options.makes.length)return null;
   const models=draft?options.models(draft.make):[],years=draft?.model?options.years(draft.make,draft.model):[];
-  const choose=next=>{setDraft(next);if(!next||next.model){saveVehicle(next);onChange(next);}};
+  const choose=next=>{setDraft(next);if(!next||next.model){setVehicle(next);onChange(next);}};
   return <section className="vehicle-bar" aria-label="Find parts for your vehicle">
     <div className="vehicle-title"><Car size={20} aria-hidden="true"/><div><b>Find parts for your vehicle</b><small>Shows parts the store has listed for it</small></div></div>
     <div className="vehicle-fields">
@@ -27,13 +26,13 @@ export function VehiclePicker({vehicle,onChange,counts}){
       {years.length?<label><span className="sr-only">Vehicle year</span><select value={draft?.year||''} disabled={!draft?.model} onChange={e=>choose({...draft,year:e.target.value?Number(e.target.value):null})}><option value="">Any year</option>{years.map(y=><option key={y}>{y}</option>)}</select></label>:null}
       {draft?<button type="button" className="vehicle-clear" aria-label="Clear vehicle" onClick={()=>choose(null)}><X size={15}/>Clear</button>:saved?<button type="button" className="vehicle-saved" onClick={()=>onChange(saved)}>Use saved: {vehicleLabel(saved)}</button>:null}
     </div>
-    {vehicle?.model&&counts?<p className="vehicle-summary" role="status"><b>{counts.yes}</b> part{counts.yes===1?'':'s'} listed for {vehicleLabel(vehicle)}.{counts.unknown?<> {counts.unknown} more {counts.unknown===1?'has':'have'} no fitment information yet. Ask the team before ordering.</>:null}</p>:null}
+    {vehicle?.model&&counts?<p className="vehicle-summary" role="status"><b>{counts.yes}</b> part{counts.yes===1?'':'s'} listed for {vehicleLabel(vehicle)}.{counts.unknown?<> {counts.unknown} more {counts.unknown===1?'has':'have'} no fitment information yet. Ask the team before ordering.</>:null}{onShowAll?<> <button type="button" className="text-button" onClick={onShowAll}>Show all parts</button></>:null}</p>:null}
   </section>;
 }
 
 /* Product page: where the part is listed, and how it relates to the customer's saved vehicle */
 export function FitmentPanel({product}){
-  const {data}=useApp(),rows=(data.fitment||[]).filter(f=>f.product_id===product.id),vehicle=loadVehicle(),status=vehicle?fitStatus(rows,vehicle):'unknown';
+  const {data}=useApp(),{vehicle}=useVehicle(),rows=(data.fitment||[]).filter(f=>f.product_id===product.id),status=vehicle?fitStatus(rows,vehicle):'unknown';
   if(!rows.length)return <p className="fitment-none">No vehicle list for this part yet. Ask the seller to confirm it fits before you order.</p>;
   return <div className="fitment-panel">
     {vehicle&&status==='yes'?<p className="fit-yes"><Check size={16}/>Listed for your {vehicleLabel(vehicle)}</p>:null}

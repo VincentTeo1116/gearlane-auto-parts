@@ -50,6 +50,10 @@ jobs:
         run: npm run test:banners
       - name: Verify design system, reviews, promo privacy and phone header
         run: npm run test:design
+      - name: Verify garage, address book, product questions and PDF invoices
+        run: npm run test:profile
+      - name: Verify order tracking, order lists, cart helpers and the staff home screens
+        run: npm run test:ux
       - name: Verify vehicle finder, stock alerts, SEO metadata and comparison labels
         run: npm run test:features
       - name: Verify behaviour with a large catalogue and order history

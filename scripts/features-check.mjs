@@ -86,7 +86,7 @@ try{
   // ---- Settings are sectioned and still save
   await page.goto(base+'/workspace/settings');
   await page.locator('fieldset.settings-section').first().waitFor();
-  assert.equal(await page.locator('fieldset.settings-section').count(),5);
+  assert.equal(await page.locator('fieldset.settings-section').count(),6);
   await page.getByRole('button',{name:'Save store settings'}).click();
   await page.getByText('Store settings saved.').waitFor();
   await logout();

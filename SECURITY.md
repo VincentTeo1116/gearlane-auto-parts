@@ -21,6 +21,8 @@ Do not put exploit details, access tokens, customer records, private receipts or
 - `/api/staff-alert` emails only the configured store-owner address. It requires the caller to be the customer of a support conversation, reads the message text from the database (a recent message by that caller, never text from the request), and allows one email per conversation every five minutes.
 - `/api/order-email` sends a customer email only if the caller can read the order under row-level security and the order is really in the state being announced, sends each milestone once, always uses the order's own customer as the recipient, and never includes bank details. Customer emails are off unless `EMAIL_CUSTOMERS=true`. The email provider key lives only in the Vercel server environment.
 - `/api/health`, `/sitemap.xml` and `/robots.txt` use only the public key and return nothing a visitor cannot already see.
+- Saved addresses, garage vehicles and product questions are readable only by their owner (and staff for questions) and are written only through checked database functions, with per-customer limits. Public product pages never receive who asked a question.
+- Invoices are generated in the browser from the signed-in user's own order, with all text reduced to plain ASCII and escaped so customer-typed text cannot alter the PDF.
 - CSV exports neutralise cells that a spreadsheet could run as formulas. Exports contain personal data and must be handled as such.
 
 These controls do not imply independent security certification or a guarantee of no vulnerabilities. The database test scaffold does not replace live Supabase Auth, Storage and deployment testing.

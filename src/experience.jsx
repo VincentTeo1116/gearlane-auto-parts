@@ -3,6 +3,10 @@ import {ArrowRight, ArrowLeft, Search, ShoppingBag, Package, Heart, MessageCircl
 import {useApp, useTask} from './context.jsx';
 import {CustomerHome,CatalogueSearch} from './customer-design.jsx';
 import {Button, Link, Modal, ProductArt, Notice, Field, Empty} from './components.jsx';
+import {OrderTracker} from './order-tracking.jsx';
+import {GarageChip, GarageIcon} from './garage.jsx';
+import {AddressPicker} from './profile-ui.jsx';
+import {sameAddress, startingAddress} from './address-book.mjs';
 import {money, addressSchema, validate, calculateCart, friendlyError, STATES} from './domain.mjs';
 
 export function StoreChrome() {
@@ -22,6 +26,7 @@ export function StoreChrome() {
         <Link to="/" go={go} className="brand" aria-label="GearLane home"><span className="brand-mark">G<span/></span><span>{data?.settings.store_name || 'GearLane Auto Parts'}<small><span>PARTS. SUPPORT.</span>{' '}<span>PEACE OF MIND.</span></small></span></Link>
         <CatalogueSearch/>
         <div className="header-icons">
+          {staff ? null : <GarageIcon/>}
           {profile ? <button className="icon-link notification-control" aria-label="Notifications" onClick={() => setDialog({type: 'notifications'})}><Bell size={22}/>{unread ? <small>{unread}</small> : null}</button> : null}
           <Link to="/account" go={go} className="account-link"><User size={22}/><span>{profile ? profile.full_name.split(' ')[0] : 'Sign in'}<small>{profile ? 'Your account' : 'or create an account'}</small></span></Link>
           <Link to="/cart" go={go} className="header-cart" aria-label={'Cart, ' + count + ' items'}><ShoppingBag size={22}/><span>Cart <b key={count} className={"count-pop"+(count?"":" zero")}>{count}</b></span></Link>
@@ -31,6 +36,7 @@ export function StoreChrome() {
       <div className="primary-navigation-wrap"><nav id="store-primary-navigation" className={'container shop-navigation ' + (menu ? 'open' : '')} aria-label="Store navigation">
         {links.map(([to, text, Icon]) => <Link key={to} to={to} go={go} aria-current={path === to ? 'page' : undefined} className={path === to ? 'active' : ''}><Icon size={17}/>{text}</Link>)}
         <Link to="/wishlist" go={go} aria-current={path === '/wishlist' ? 'page' : undefined}><Heart size={17}/>Saved items</Link>
+        {staff ? null : <GarageChip/>}
         <button className="shopping-help-link" onClick={() => {setMenu(false); setDialog({type: 'shopping-guide'});}}><CircleHelp size={17}/>How to order</button>
         <span className="nav-note"><CreditCard size={16}/>Pay by bank transfer</span>
       </nav></div>
@@ -75,7 +81,12 @@ export function GuidedCheckout({Totals}) {
   const {data, cart, setCart, profile, repository, go, track, setDialog} = useApp();
   const task = useTask();
   const [stage, setStage] = useState('delivery');
-  const [address, setAddress] = useState({name:profile.full_name,phone:profile.phone,line1:'',city:'',postcode:'',state:'Selangor'});
+  const saved = data.saved_addresses || [];
+  const start = startingAddress({saved, orders: data.orders || [], profile});
+  const [address, setAddress] = useState({name:start.name,phone:start.phone,line1:start.line1,city:start.city,postcode:start.postcode,state:start.state});
+  const [savedId, setSavedId] = useState(start.savedId), [saveForLater, setSaveForLater] = useState(false);
+  // saved addresses can arrive just after the page opens: fill the empty form once they do
+  useEffect(() => {if(!address.line1 && saved.length){const s = startingAddress({saved, orders: data.orders || [], profile});setAddress({name:s.name,phone:s.phone,line1:s.line1,city:s.city,postcode:s.postcode,state:s.state});setSavedId(s.savedId);}}, [saved.length]);
   const [code, setCode] = useState(''), [applied, setApplied] = useState(''), [accepted, setAccepted] = useState(false);
   const [promo, setPromo] = useState(null), [promoBusy, setPromoBusy] = useState(false), [promoError, setPromoError] = useState('');
   const heading = useRef(null), idempotency = useRef(null);
@@ -90,14 +101,14 @@ export function GuidedCheckout({Totals}) {
     e.preventDefault();
     if (stage === 'delivery') {try {setAddress(validate(addressSchema,address));changeStage('review');}catch(e) {task.setError(e.message);}return;}
     const result=await task.perform(async () => {if(!accepted) throw new Error('Please confirm the item specifications and bank-transfer process.');if(error) throw new Error(error);return repository.rpc('create_order',{p_items:cart,p_address:validate(addressSchema,address),p_code:applied,p_idempotency_key:idempotency.current,p_expected_total:totals.total_cents});});
-    if(result.ok) {setCart([]);sessionStorage.removeItem('gearlane_checkout_key');go('/orders/'+result.value);setDialog({type:'order-placed',orderId:result.value});}
+    if(result.ok) {if(saveForLater && !saved.some(a => sameAddress(a,address))) repository.rpc('save_address',{p_address:{label:'',...address},p_make_default:!saved.length}).catch(() => {});setCart([]);sessionStorage.removeItem('gearlane_checkout_key');go('/orders/'+result.value);setDialog({type:'order-placed',orderId:result.value});}
   };
   if(!cart.length) return <main className="container section"><ShoppingSteps current={1}/><Empty title="Your cart is empty" action={<Link className="button" to="/shop" go={go}>Find your parts <ArrowRight size={18}/></Link>}>Add available parts before entering delivery details.</Empty></main>;
   return <main className="container section guided-checkout"><ShoppingSteps current={2}/><div className="section-heading"><div><span className="eyebrow">{stage === 'delivery' ? 'STEP 1 OF 2 · DELIVERY' : 'STEP 2 OF 2 · REVIEW'}</span><h1 ref={heading} tabIndex={-1}>{stage === 'delivery' ? 'Where should we send your order?' : 'Everything look right?'}</h1><p>{stage === 'delivery' ? 'Enter your delivery details. You can check everything before placing the order.' : 'Check your items, delivery address and total. Bank instructions come next.'}</p></div></div>
     <ol className="stage-progress" aria-label="Checkout progress"><li className={stage==='delivery'?'current':'complete'} aria-current={stage==='delivery'?'step':undefined}><span>{stage==='delivery'?'1':<Check size={15}/>}</span>{stage==='review'?<button type="button" onClick={() => changeStage('delivery')}>Delivery</button>:<b>Delivery</b>}</li><li className={stage==='review'?'current':''} aria-current={stage==='review'?'step':undefined}><span>2</span><b>Review &amp; place order</b></li><li className="after"><span>3</span><b>Pay by bank transfer</b><small>after ordering</small></li></ol>
     <form className="checkout-layout" onSubmit={submit}>
       <section>
-        {stage === 'delivery' ? <div className="panel"><div className="panel-heading"><h2>Delivery details</h2><span className="signed-in-note"><ShieldCheck size={16}/>Signed in</span></div><div className="form-grid">{[['name','Full name',100],['phone','Phone number',20],['line1','Delivery address',300],['city','City',80],['postcode','Postcode',5]].map(([key,text,max]) => <Field key={key} label={text} className={key === 'line1' ? 'full' : ''}><input name={key} required minLength={key === 'line1' ? 8 : 2} maxLength={max} autoComplete={{name:'name',phone:'tel',line1:'street-address',city:'address-level2',postcode:'postal-code'}[key]} value={address[key]} inputMode={key === 'phone' ? 'tel' : key === 'postcode' ? 'numeric' : 'text'} onChange={e => setAddress({...address,[key]:e.target.value})}/></Field>)}<Field label="State / territory"><select autoComplete="address-level1" value={address.state} onChange={e => setAddress({...address,state:e.target.value})}>{STATES.map(s => <option key={s}>{s}</option>)}</select></Field></div>{task.error ? <Notice type="error">{task.error}</Notice> : null}<div className="checkout-stage-actions"><Link to="/cart" go={go} className="text-link"><ArrowLeft size={17}/>Back to cart</Link><Button type="submit">Continue to review <ArrowRight size={18}/></Button></div></div> : <>
+        {stage === 'delivery' ? <div className="panel"><div className="panel-heading"><h2>Delivery details</h2><span className="signed-in-note"><ShieldCheck size={16}/>Signed in</span></div><AddressPicker saved={saved} selectedId={savedId} onPick={a => {if(a){setAddress({name:a.name,phone:a.phone,line1:a.line1,city:a.city,postcode:a.postcode,state:a.state});setSavedId(a.id);}else{setAddress({...address,line1:'',city:'',postcode:''});setSavedId(null);}}}/><div className="form-grid">{[['name','Full name',100],['phone','Phone number',20],['line1','Delivery address',300],['city','City',80],['postcode','Postcode',5]].map(([key,text,max]) => <Field key={key} label={text} className={key === 'line1' ? 'full' : ''}><input name={key} required minLength={key === 'line1' ? 8 : 2} maxLength={max} autoComplete={{name:'name',phone:'tel',line1:'street-address',city:'address-level2',postcode:'postal-code'}[key]} value={address[key]} inputMode={key === 'phone' ? 'tel' : key === 'postcode' ? 'numeric' : 'text'} onChange={e => {setAddress({...address,[key]:e.target.value});setSavedId(null);}}/></Field>)}<Field label="State / territory"><select autoComplete="address-level1" value={address.state} onChange={e => {setAddress({...address,state:e.target.value});setSavedId(null);}}>{STATES.map(s => <option key={s}>{s}</option>)}</select></Field></div>{!savedId && !saved.some(a => sameAddress(a,address)) ? <label className="checkbox save-address"><input type="checkbox" checked={saveForLater} onChange={e => setSaveForLater(e.target.checked)}/>Save this address to my address book</label> : null}{task.error ? <Notice type="error">{task.error}</Notice> : null}<div className="checkout-stage-actions"><Link to="/cart" go={go} className="text-link"><ArrowLeft size={17}/>Back to cart</Link><Button type="submit">Continue to review <ArrowRight size={18}/></Button></div></div> : <>
           <div className="panel delivery-review"><div className="panel-heading"><h2>Delivery address</h2><Button type="button" variant="secondary small" onClick={() => changeStage('delivery')}>Edit address</Button></div><b>{address.name}</b><p>{address.line1}<br/>{address.postcode} {address.city}, {address.state}<br/>{address.phone}</p></div>
           <div className="panel payment-explainer"><span className="eyebrow">WHAT HAPPENS AFTER YOU PLACE THE ORDER?</span><h2>Pay by manual bank transfer</h2><ol className="payment-mini-steps"><li><b>Get your instructions</b><span>Your order page shows the bank account and exact amount.</span></li><li><b>Transfer and submit the reference</b><span>Make your transfer, then add its reference and an optional receipt.</span></li><li><b>We verify and prepare</b><span>The store checks the deposit before preparing your order.</span></li></ol><Notice>Nothing is charged automatically. Unpaid reservations expire after 24 hours. If a reservation has expired, contact the seller before transferring.</Notice><label className="checkbox"><input type="checkbox" required checked={accepted} onChange={e => setAccepted(e.target.checked)}/>I checked the item specifications and understand how bank-transfer payment works.</label></div>
         </>}
@@ -120,7 +131,7 @@ export function OrderGuidance({order, staff, refund}) {
   else if(!order.received_at) {title=staff ? 'Order dispatched' : 'Your order is on its way';text=staff ? 'Carrier details are recorded below. The buyer confirms receipt to unlock reviews.' : 'Check the tracking details below. Confirm receipt only once your items have arrived.';if(!staff) action='Go to receipt confirmation';}
   else {title='Order received. Thank you!';text=staff ? 'The buyer has confirmed receipt. You can respond to their feedback from Customer feedback.' : 'You can now review each purchased item below, or contact the seller if you need help.';}
   const current=order.received_at ? 4 : ['shipped','delivered'].includes(order.status) ? 3 : order.payment_status === 'verified' ? 2 : order.payment_status === 'submitted' ? 1 : 0;
-  return <section className="order-guidance" aria-label="Order progress and next action"><div className="next-action-card"><span className="next-action-icon">{order.received_at ? <Check/> : <Package/>}</span><div><span className="eyebrow">{staff ? 'WHAT TO DO NEXT' : 'YOUR ORDER UPDATE'}</span><h2>{title}</h2><p>{text}</p></div>{action ? <Button variant="secondary" onClick={()=>{const target=document.getElementById('order-actions');target?.scrollIntoView({behavior:'smooth',block:'start'});target?.focus({preventScroll:true});}}>{action}<ArrowRight size={17}/></Button> : !staff ? <Link className="text-link" to="/messages" go={go}>Need help?<MessageCircle size={17}/></Link> : null}</div>{order.status !== 'cancelled' ? <ol className="order-progress" aria-label="Order timeline">{['Order placed','Transfer submitted','Payment verified','Dispatched','Received'].map((name,index)=><li key={name} className={index<=current ? 'complete' : ''} aria-current={index===current ? 'step' : undefined}><span>{index<=current ? <Check size={15}/> : index+1}</span><b>{name}</b></li>)}</ol> : null}</section>;
+  return <section className="order-guidance" aria-label="Order progress and next action"><div className="next-action-card"><span className="next-action-icon">{order.received_at ? <Check/> : <Package/>}</span><div><span className="eyebrow">{staff ? 'WHAT TO DO NEXT' : 'YOUR ORDER UPDATE'}</span><h2>{title}</h2><p>{text}</p></div>{action ? <Button variant="secondary" onClick={()=>{const target=document.getElementById('order-actions');target?.scrollIntoView({behavior:'smooth',block:'start'});target?.focus({preventScroll:true});}}>{action}<ArrowRight size={17}/></Button> : !staff ? <Link className="text-link" to="/messages" go={go}>Need help?<MessageCircle size={17}/></Link> : null}</div><OrderTracker order={order}/></section>;
 }
 
 export function OrderListNext({order, staff}) {
@@ -134,7 +145,7 @@ export function OrderListNext({order, staff}) {
   return <p className="order-list-next"><ChevronRight size={16}/>{text}</p>;
 }
 
-export function WorkspaceWelcome() {
+export function WorkspaceWelcome({queue = true} = {}) {
   const {profile,data,go} = useApp();
   const pending=data.orders.filter(o=>o.payment_status==='submitted').length;
   const preparing=data.orders.filter(o=>o.status==='processing').length;
@@ -144,6 +155,6 @@ export function WorkspaceWelcome() {
   const setup=profile.role==='admin'&&!data.settings.checkout_enabled;
   return <>
     {setup ? <section className="setup-guide"><div><span className="eyebrow">GET YOUR STORE READY</span><h2>A few checks before your first sale</h2><p>Checkout is currently disabled. Complete these steps before accepting orders.</p></div><div className="setup-links"><Link to="/workspace/products" go={go}><span>1</span><div><b>Confirm products and stock</b><small>{unconfirmed} active items need a confirmed price or available stock</small></div><ChevronRight size={18}/></Link><Link to="/workspace/settings" go={go}><span>2</span><div><b>Add bank and delivery details</b><small>Check your account, charges and return policy</small></div><ChevronRight size={18}/></Link><Link to="/workspace/settings" go={go}><span>3</span><div><b>Enable checkout when ready</b><small>Only confirmed, stocked products can be purchased</small></div><ChevronRight size={18}/></Link></div></section> : null}
-    <section className="work-queue" aria-label="Priority tasks">{[[pending,'Verify payments','Check the actual bank deposit','/workspace/orders?payment=submitted',CreditCard],[preparing,'Prepare orders','Pack items and record shipment','/workspace/orders?status=processing',Package],[requested,'Review refunds','Check eligibility and returned goods','/workspace/refunds',ClipboardCheck],[low,'Restock items','Products with fewer than 10 units','/workspace/restock',Boxes]].map(([count,title,text,to,Icon])=><Link key={title} to={to} go={go}><Icon size={23}/><div><b>{title}<span>{count}</span></b><small>{text}</small></div><ArrowRight size={18}/></Link>)}</section>
+    {queue ? <section className="work-queue" aria-label="Priority tasks">{[[pending,'Verify payments','Check the actual bank deposit','/workspace/orders?payment=submitted',CreditCard],[preparing,'Prepare orders','Pack items and record shipment','/workspace/orders?status=processing',Package],[requested,'Review refunds','Check eligibility and returned goods','/workspace/refunds',ClipboardCheck],[low,'Restock items','Products with fewer than 10 units','/workspace/restock',Boxes]].map(([count,title,text,to,Icon])=><Link key={title} to={to} go={go}><Icon size={23}/><div><b>{title}<span>{count}</span></b><small>{text}</small></div><ArrowRight size={18}/></Link>)}</section> : null}
   </>;
 }

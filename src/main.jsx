@@ -16,5 +16,7 @@ import './design-refresh.css';
 import './design-flows.css';
 import './design-v3.css';
 import './design-v4.css';
+import './design-v5.css';
+import './design-v6.css';
 if(import.meta.env.PROD&&import.meta.env.VITE_DEMO_MODE!=='true')installErrorReporting();
 createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);

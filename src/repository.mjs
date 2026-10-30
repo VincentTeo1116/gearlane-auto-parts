@@ -6,6 +6,8 @@ export const configured=Boolean(url&&key);
 export const companyName=import.meta.env.VITE_COMPANY_NAME||'GearLane Auto Parts';
 /* Signed-out visitors may read review text only; identifiers are hidden by the database (supabase/010-privacy-hardening.sql). */
 const REVIEW_PUBLIC_COLUMNS='id,product_id,rating,body,display_name,reply,published,created_at';
+/* Signed-out visitors read answered questions without who asked; the database enforces this too (017-product-questions.sql). */
+const QUESTION_PUBLIC_COLUMNS='id,product_id,asker_name,question,answer,answered_at,created_at';
 /* Optional features: if their migration has not been run yet the table does not exist, and the store must still load. */
 const optional=async promise=>{const response=await promise;if(response.error&&['42P01','PGRST205','PGRST200'].includes(response.error.code))return{data:[],error:null};return response;};
 const result=async promise=>{const {data,error}=await promise;if(error)throw error;return data;};
@@ -25,7 +27,7 @@ function createLiveRepository(){
  const core=profile=>{
   const cacheKey=(profile?.id||'guest')+':'+(profile?.role||'guest');
   const cached=coreCache.get(cacheKey);if(cached&&cached.until>Date.now())return cached.promise;
-  const queries={products:supabase.from('products').select('*').order('name'),settings:profile?.role==='admin'?supabase.rpc('admin_get_settings'):supabase.from('public_store_settings').select('*').eq('id',1).single(),announcements:supabase.from('announcements').select('*').order('created_at',{ascending:false}),promotions:profile?.role==='admin'?supabase.from('promotions').select('*'):Promise.resolve({data:[],error:null}),fitment:optional(supabase.from('product_fitment').select('product_id,make,model,year_from,year_to').limit(5000)),reviews:supabase.from('reviews').select(profile?'*':REVIEW_PUBLIC_COLUMNS).order('created_at',{ascending:false}).limit(500)};
+  const queries={products:supabase.from('products').select('*').order('name'),settings:profile?.role==='admin'?supabase.rpc('admin_get_settings'):supabase.from('public_store_settings').select('*').eq('id',1).single(),announcements:supabase.from('announcements').select('*').order('created_at',{ascending:false}),promotions:profile?.role==='admin'?supabase.from('promotions').select('*'):Promise.resolve({data:[],error:null}),fitment:optional(supabase.from('product_fitment').select('product_id,make,model,year_from,year_to').limit(5000)),questions:optional(supabase.from('product_questions').select(profile?'*':QUESTION_PUBLIC_COLUMNS).order('created_at',{ascending:false}).limit(500)),reviews:supabase.from('reviews').select(profile?'*':REVIEW_PUBLIC_COLUMNS).order('created_at',{ascending:false}).limit(500)};
   const promise=Promise.all([...Object.entries(queries).map(async([name,query])=>[name,await result(query)]),banners(true).then(rows=>['banners',rows])]).then(Object.fromEntries).catch(error=>{if(coreCache.get(cacheKey)?.promise===promise)coreCache.delete(cacheKey);throw error;});
   coreCache.set(cacheKey,{promise,until:Date.now()+15000});return promise;
  };
@@ -46,7 +48,7 @@ function createLiveRepository(){
     if(want.has('refunds'))queries.refunds=supabase.from('refunds').select('*').order('created_at',{ascending:false}).limit(200);
     if(want.has('conversations'))queries.conversations=supabase.from('conversations').select('*,members:conversation_members(*)').order('created_at',{ascending:false}).limit(100);
     if(want.has('notifications'))queries.notifications=supabase.from('notifications').select('*').order('created_at',{ascending:false}).limit(100);
-    if(profile.role==='customer'&&want.has('wishlist')){queries.wishlist=supabase.from('wishlist').select('*');queries.stock_alerts=optional(supabase.from('stock_alerts').select('*'));}
+    if(profile.role==='customer'&&want.has('wishlist')){queries.wishlist=supabase.from('wishlist').select('*');queries.stock_alerts=optional(supabase.from('stock_alerts').select('*'));queries.saved_addresses=optional(supabase.from('saved_addresses').select('*').order('created_at',{ascending:false}));queries.garage_vehicles=optional(supabase.from('garage_vehicles').select('*').order('created_at',{ascending:false}));}
     if(['worker','admin'].includes(profile.role)){
      if(want.has('restock'))queries.restock=supabase.from('restock_requests').select('*').order('created_at',{ascending:false});
      if(want.has('directory'))queries.directory=supabase.rpc('staff_directory');

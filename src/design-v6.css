@@ -1,0 +1,108 @@
+/* Design refresh v6: garage, address book, questions and answers.
+   Loaded last; reuses the tokens from design-refresh.css and design-v3.css. */
+
+/* ======================================================================
+   Header: "My vehicle"
+   ====================================================================== */
+.garage-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px; border: 1px dashed #9fb3c1; border-radius: 999px; background: #fff; color: var(--ink-soft); font-weight: 650; white-space: nowrap; transition: background .15s, border-color .15s; }
+.garage-chip:hover { background: var(--surface-soft); border-color: var(--ink-soft); }
+.garage-chip.has-vehicle { border-style: solid; border-color: var(--accent); background: var(--accent-soft); color: #7c2d12; }
+.garage-chip span { font-size: .8125rem; opacity: .85; }
+.garage-chip b { font-size: .9375rem; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+.garage-chip svg { flex-shrink: 0; }
+@media (max-width: 760px) { .shop-navigation .garage-chip { width: 100%; justify-content: flex-start; min-height: 46px; border-radius: 10px; } }
+
+/* Garage list and form */
+.garage { display: grid; gap: 14px; }
+.garage-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.garage-list li { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--card-line); border-radius: 12px; background: #fff; }
+.garage-list li.active { border-color: var(--accent); background: var(--accent-soft); }
+.garage-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--surface-soft); color: var(--ink-soft); }
+.garage-list li.active .garage-icon { background: #fff; color: var(--accent); }
+.garage-name { display: grid; min-width: 0; }
+.garage-name b { color: var(--ink); overflow-wrap: anywhere; }
+.garage-name small { color: var(--muted); }
+.garage-add h3 { margin: 4px 0 8px; font-size: 1rem; color: var(--ink); }
+.garage-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.garage-fields label { flex: 1 1 150px; min-width: 0; }
+.garage-fields select { width: 100%; min-height: 44px; border-radius: 10px; border-color: #c5d3dc; font-weight: 600; }
+/* narrow phones: icon, name and remove on the first row; the status or "Use this vehicle" button on the second */
+@media (max-width: 560px) { .garage-list li { grid-template-columns: 38px minmax(0, 1fr) auto; } .garage-list li > :nth-child(3) { grid-column: 2 / -1; grid-row: 2; justify-self: start; } .garage-list li > :nth-child(4) { grid-column: 3; grid-row: 1; } }
+
+/* A part's relationship to the active vehicle, on the card */
+.fit-chip { display: inline-flex; align-items: center; gap: 5px; width: fit-content; padding: 3px 10px; margin: -2px 0 8px; border-radius: 99px; font-size: .8125rem; font-weight: 750; }
+.fit-chip.yes { background: #e4f4ea; color: #1b5e37; }
+.fit-chip.no { background: #fff0cc; color: #6f4f0a; }
+.vehicle-shelf { padding-top: 8px; }
+
+/* ======================================================================
+   Address book (account) and the picker at checkout
+   ====================================================================== */
+.address-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 10px; }
+.address-list li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 14px 16px; border: 1px solid var(--card-line); border-radius: 12px; background: #fff; }
+.address-list li.default { border-color: var(--success); background: #f5fbf7; }
+.address-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: var(--surface-soft); color: var(--ink-soft); }
+.address-list li.default .address-icon { background: #e4f4ea; color: #1b5e37; }
+.address-body { display: grid; gap: 1px; min-width: 0; color: var(--ink-soft); font-size: .9375rem; }
+.address-body b { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--ink); font-size: 1rem; margin-bottom: 2px; }
+.address-body span { overflow-wrap: anywhere; }
+.address-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
+@media (max-width: 640px) { .address-list li { grid-template-columns: 40px minmax(0, 1fr); } .address-actions { grid-column: 1 / -1; justify-content: flex-start; } }
+
+.address-picker { border: 0; margin: 0 0 18px; padding: 0; min-width: 0; }
+.address-picker legend { padding: 0; margin-bottom: 8px; font-weight: 700; color: var(--ink); }
+.address-options { display: grid; gap: 8px; }
+.address-option { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px 14px; border: 1px solid var(--card-line); border-radius: 12px; background: #fff; cursor: pointer; transition: border-color .15s, background .15s; }
+.address-option:hover { border-color: #9fb3c1; }
+.address-option.selected { border-color: var(--accent); background: var(--accent-soft); }
+.address-option input { width: 20px; height: 20px; min-height: 0; margin-top: 2px; accent-color: var(--accent); }
+.address-option span { display: grid; gap: 2px; min-width: 0; }
+.address-option b { color: var(--ink); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.address-option b em { font-style: normal; font-size: .75rem; padding: 2px 8px; border-radius: 99px; background: #e4f4ea; color: #1b5e37; }
+.address-option small { color: var(--muted); overflow-wrap: anywhere; }
+.save-address { margin: 4px 0 14px; }
+
+/* ======================================================================
+   Product questions and answers
+   ====================================================================== */
+.qa-panel { display: grid; gap: 16px; }
+.qa-head h3 { margin: 0 0 4px; color: var(--ink); }
+.qa-head p { margin: 0; }
+.qa-form { display: grid; gap: 6px; padding: 16px; border: 1px solid var(--card-line); border-radius: 14px; background: #fff; }
+.qa-form textarea { min-height: 96px; }
+.qa-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--muted); font-size: .875rem; }
+.qa-meta .warn { color: #8a5a07; font-weight: 700; }
+.qa-warning { color: #7c2d12; background: var(--accent-soft); border-radius: 8px; padding: 3px 10px; }
+.qa-list, .qa-mine { display: grid; gap: 12px; }
+.qa-mine h4 { margin: 0; color: var(--ink-soft); }
+.qa-item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 16px; border: 1px solid var(--card-line); border-radius: 14px; background: #fff; }
+.qa-item.waiting { background: var(--surface-soft); border-style: dashed; }
+.qa-item p { margin: 0 0 4px; color: var(--ink); overflow-wrap: anywhere; }
+.qa-item small { display: inline-flex; align-items: center; gap: 5px; }
+.qa-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; font-weight: 800; font-size: .875rem; flex-shrink: 0; }
+.qa-mark.q { background: #e1ebf6; color: #2f5373; }
+.qa-mark.a { background: var(--accent-soft); color: var(--accent); }
+.qa-answer { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #fbf6f2; border: 1px solid var(--accent-line); }
+.qa-answer b { color: #7c2d12; }
+.qa-answer.staff { display: block; background: #f4f9f6; border-color: #cfe3d6; }
+.qa-answer.staff b { color: #1f5230; }
+
+.question-list { display: grid; gap: 12px; }
+.question-card { margin: 0 !important; display: grid; gap: 8px; }
+.question-card.overdue { border-left: 5px solid #c0392b; }
+.question-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.question-product { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--ink); }
+.question-product:hover { color: var(--accent); }
+.question-text { margin: 0; font-size: 1.0625rem; color: var(--ink); overflow-wrap: anywhere; }
+.question-quote { margin: 0 0 14px; padding: 12px 16px; border-left: 4px solid var(--accent); background: var(--surface-soft); border-radius: 8px; color: var(--ink); overflow-wrap: anywhere; }
+
+/* Phones: the labelled chip lives in the menu, so the header gets a compact car icon instead (a dot shows a vehicle is in use) */
+.garage-btn { display: none; position: relative; }
+.garage-btn i { position: absolute; top: 8px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px #fff; }
+@media (max-width: 760px) {
+  .header-icons > .garage-btn { display: grid; place-items: center; width: 44px; min-height: 44px; }
+  .shop-navigation .garage-chip { display: none; }
+}
+
+/* Four product tabs (details, questions, reviews, source) wrap on a narrow phone instead of pushing the page wider */
+@media (max-width: 560px) { .detail-tabs { flex-wrap: wrap; gap: 0 12px; } .detail-tabs button { padding-inline: 6px; } }

@@ -73,6 +73,8 @@ try {
   }
   await page.setViewportSize({width:390,height:844});
   await visit('/checkout');
+  // The form starts from the customer's last address, so empty it to prove an invalid address cannot advance
+  await page.getByLabel('Delivery address',{exact:true}).fill('');
   await page.getByRole('button',{name:'Continue to review',exact:true}).click();
   assert.equal(await page.getByRole('heading',{name:'Where should we send your order?'}).count(),1,'Invalid delivery cannot advance');
   for(const [name,value] of [['Full name','Responsive Buyer'],['Phone number','0123456789'],['Delivery address','12 Jalan Responsive, Taman Test'],['City','Petaling Jaya'],['Postcode','47300']])await page.getByLabel(name,{exact:true}).fill(value);
@@ -111,7 +113,7 @@ try {
     console.log('Admin layouts passed at '+width+'px');
   }
   await visit('/workspace');
-  await page.getByRole('link',{name:/Verify payments/}).click();
+  await page.locator('.action-center').getByRole('link',{name:/payments? to verify/}).click();
   await page.waitForURL('**/workspace/orders?payment=submitted');
   assert.equal(await page.getByLabel('Payment status',{exact:true}).inputValue(),'submitted');
   await page.getByLabel('Payment status',{exact:true}).selectOption('all');

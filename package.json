@@ -8,7 +8,7 @@
     "dev:demo": "vite --mode demo --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs tests/chat.test.mjs tests/loading-banners.test.mjs tests/sample-scenario.test.mjs tests/sample-database.test.mjs tests/chat-inbox.test.mjs tests/review-tags.test.mjs tests/privacy.test.mjs tests/ops-api.test.mjs tests/dashboard-math.test.mjs tests/csv.test.mjs tests/seo.test.mjs tests/order-email.test.mjs tests/features-db.test.mjs tests/fitment.test.mjs tests/staff-alert.test.mjs",
+    "test": "node --test tests/domain.test.mjs tests/database.test.mjs tests/api.test.mjs tests/chat.test.mjs tests/loading-banners.test.mjs tests/sample-scenario.test.mjs tests/sample-database.test.mjs tests/chat-inbox.test.mjs tests/review-tags.test.mjs tests/privacy.test.mjs tests/ops-api.test.mjs tests/dashboard-math.test.mjs tests/csv.test.mjs tests/seo.test.mjs tests/order-email.test.mjs tests/features-db.test.mjs tests/fitment.test.mjs tests/staff-alert.test.mjs tests/order-logic.test.mjs tests/pdf.test.mjs tests/invoice.test.mjs tests/profile-db.test.mjs tests/profile-logic.test.mjs tests/setup-sql.test.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "seed:sql": "node scripts/generate-seed.mjs",
     "test:responsive": "node scripts/responsive-check.mjs",
@@ -20,7 +20,9 @@
     "test:chat-inbox": "node scripts/chat-inbox-check.mjs",
     "test:design": "node scripts/design-check.mjs",
     "test:load": "node scripts/load-check.mjs",
-    "test:features": "node scripts/features-check.mjs"
+    "test:features": "node scripts/features-check.mjs",
+    "test:ux": "node scripts/ux-check.mjs",
+    "test:profile": "node scripts/profile-check.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",

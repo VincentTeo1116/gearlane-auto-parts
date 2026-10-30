@@ -15,7 +15,7 @@ await server.listen();
 let browser;
 const errors=[];
 const base='http://127.0.0.1:5202';
-const timed=async fn=>{const start=Date.now();const value=await fn();return{ms:Date.now()-start,value};};
+const timed=async fn=>{const start=Date.now();const value=await fn();const ms=Date.now()-start;if(process.env.LOAD_VERBOSE)console.log('  timing',ms+'ms');return{ms,value};};
 try{
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true});

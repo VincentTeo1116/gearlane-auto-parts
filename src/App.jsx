@@ -11,6 +11,7 @@ import {StoreChrome,ShoppingGuide} from './experience.jsx';
 import {StoreLoading,ScreenSkeleton} from './visuals.jsx';
 import {ToastRegion,ActionDialog} from './feedback.jsx';
 import {SellerChat} from './seller-chat.jsx';
+import {GarageDialog} from './garage.jsx';
 import {applySeo,seoFor} from './seo.mjs';
 
 function useRoute(){const[route,setRoute]=useState(()=>location.pathname+location.search);useEffect(()=>{const handler=()=>setRoute(location.pathname+location.search);window.addEventListener('popstate',handler);return()=>window.removeEventListener('popstate',handler);},[]);const go=useCallback((to,{preserveScroll=false}={})=>{if(!to.startsWith('/')||to.startsWith('//'))return;history.pushState({},'',to);setRoute(to);if(!preserveScroll){window.scrollTo({top:0,behavior:'instant'});setTimeout(()=>document.getElementById('page-main')?.focus(),0);}},[]);return[route,go];}
@@ -91,7 +92,7 @@ export default function App(){
   {dialog&&['registration-success','order-placed','clear-cart'].includes(dialog.type)?<ActionDialog dialog={dialog} onClose={()=>setDialog(null)}/>:null}
   {dialog?.type==='shopping-guide'?<ShoppingGuide onClose={()=>setDialog(null)}/>:null}
   {support.visited&&profile?.role==='customer'&&data&&!isWorkspace?<SellerChat key={profile.id} open={support.open} product={support.product} conversationId={support.conversationId} onClose={closeSupport} onClearProduct={()=>setSupport(s=>({...s,product:null}))} onOpened={id=>setSupport(s=>({...s,product:null,conversationId:id}))} onBusyChange={setSupportBusy}/>:null}
-  {dialog?.type==='notifications'?<Modal title="Your notifications" onClose={()=>setDialog(null)}><Button variant="secondary small" onClick={()=>run(()=>repository.rpc('read_notifications'),'Marked as read.').catch(e=>notify(friendlyError(e),'error'))}>Mark all read</Button><div className="notification-list">{data?.notifications?.length?data.notifications.map(n=><button key={n.id} className={n.read_at?'read':''} onClick={()=>{setDialog(null);go(n.route);}}><b>{n.title}</b><p>{n.body}</p></button>):<p>No notifications yet.</p>}</div></Modal>:null}
+  {dialog?.type==='garage'?<GarageDialog onClose={()=>setDialog(null)}/>:null}{dialog?.type==='notifications'?<Modal title="Your notifications" onClose={()=>setDialog(null)}><Button variant="secondary small" onClick={()=>run(()=>repository.rpc('read_notifications'),'Marked as read.').catch(e=>notify(friendlyError(e),'error'))}>Mark all read</Button><div className="notification-list">{data?.notifications?.length?data.notifications.map(n=><button key={n.id} className={n.read_at?'read':''} onClick={()=>{setDialog(null);go(n.route);}}><b>{n.title}</b><p>{n.body}</p></button>):<p>No notifications yet.</p>}</div></Modal>:null}
   {dialog?.type==='policy'?<Modal title="Returns & delivery" onClose={()=>setDialog(null)}><p>{data.settings.return_policy}</p><p className="muted">Delivery charge: {money(data.settings.shipping_cents)}{data.settings.free_shipping_cents>0?' · Free from '+money(data.settings.free_shipping_cents):''}. The checkout shows the configured total before you place an order.</p><p>For a paid order, submit a refund request from the order page. Approval is separate from a refund transfer being recorded. Ask the team about eligibility before returning a part.</p></Modal>:null}
  </AppContext.Provider>;
 }
